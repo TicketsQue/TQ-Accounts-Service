@@ -1,0 +1,4 @@
+node_modules
+.env
+tique-accounts-deployment.yaml
+tique-accounts-service.yaml
