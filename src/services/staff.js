@@ -58,7 +58,6 @@ const signinWithPhp = async (creds, _res) => {
 
     return { php, node };
   } catch (error) {
-    console.log(error);
     if (php) {
       return { php, node: { errors: true, message: error.response.data } };
     }
@@ -77,7 +76,6 @@ const signinWithPhp = async (creds, _res) => {
         throw error;
       }
     }
-    console.log(error, "83");
     throw error;
   }
 };
