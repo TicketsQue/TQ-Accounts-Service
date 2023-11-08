@@ -44,7 +44,7 @@ const signinWithPhp = async (creds, _res) => {
     const php_response = await axios.request(config);
 
     if (php_response?.data?.errors) {
-      throw new Error("Invalid user in PHP");
+      throw new Error(php_response.data.message);
     } else {
       php = php_response.data;
     }
