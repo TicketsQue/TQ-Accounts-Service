@@ -16,7 +16,7 @@ const getToken = async ({ mobile }) => {
   }
 };
 
-const signinWithPhp = async (creds) => {
+const signinWithPhp = async (creds, _res) => {
   let php = null;
   let node = null;
   try {
@@ -58,8 +58,9 @@ const signinWithPhp = async (creds) => {
 
     return { php, node };
   } catch (error) {
-    if (php || node) {
-      return { php, node };
+    console.log(error);
+    if (php) {
+      return { php, node: { errors: true, message: error.response.data } };
     }
     if (creds?.phone && creds?.otp) {
       try {
@@ -71,11 +72,12 @@ const signinWithPhp = async (creds) => {
           `${process.env.GATEWAY_SERVER}/gateway/user/session`,
           user?.payload
         );
-        return user?.payload;
+        return { node: user?.payload };
       } catch (error) {
         throw error;
       }
     }
+    console.log(error, "83");
     throw error;
   }
 };

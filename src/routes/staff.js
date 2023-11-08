@@ -12,11 +12,11 @@ const staffRouter = Router();
 
 const phpSigininHandler = async (_req, _res) => {
   try {
-    const response = await signinWithPhp(_req.body);
+    const response = await signinWithPhp(_req.body, _res);
     _res.status(200).json(response);
   } catch (_e) {
     console.log(_e);
-    Utils.handleError(_e, _res);
+    Utils.handleAxiosError(_e, _res);
   }
 };
 
@@ -26,7 +26,7 @@ const phpOtpHandler = async (_req, _res) => {
     return _res.status(200).json(response);
   } catch (_e) {
     console.log(_e);
-    Utils.handleError(_e, _res);
+    Utils.handleAxiosError(_e, _res);
   }
 };
 
