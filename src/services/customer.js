@@ -271,4 +271,5 @@ export {
   createUser,
   getPartnerType,
   getConstants,
+  updateCustomer,
 };
