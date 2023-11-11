@@ -95,6 +95,9 @@ const otpWithPhp = async (creds) => {
   } catch (error) {
     try {
       const user = await checkUser({ mobile: creds?.phone });
+      if (user.payload.role === "Customer") {
+        throw new Error("Access denied");
+      }
       return user;
     } catch (error) {
       throw error;
