@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createUser, getPartner } from "./customer.js";
+import { createUser, getPartner, updateCustomer } from "./customer.js";
 /**
  * making API call to fetch partner information from SYSTEM service
  * @param {string} pid The partner_id whose information needs to be fetched
@@ -52,7 +52,8 @@ const createVendorCustomer = async (_req) => {
     const { mobile, email, name } = _req.body;
     const partnerCheck = await getPartner({ mobile });
     if (partnerCheck) {
-      return partnerCheck;
+      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email, partner: partnerCheck})
+      return updatedPartnerData;
     }
     const customerCreateRes = await createUser({ name, email, mobile });
     return customerCreateRes;

@@ -52,7 +52,7 @@ class DbManager {
     createConnection = async (_dbHost, _dbPort, _dbName) => {
 
         const ConnOptions = {
-            autoIndex: false,
+            autoIndex: true,
             maxPoolSize: 15,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
