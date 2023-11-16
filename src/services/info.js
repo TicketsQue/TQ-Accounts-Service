@@ -62,4 +62,34 @@ const createVendorCustomer = async (_req) => {
   }
 };
 
-export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles };
+const updatePartnerProfile = async (_req) => {
+  try{
+    const user = _req.headers.user
+    const name = _req.body.name
+    const mobile = _req.body.mobile
+    const email = _req.body.email
+    if(!(user && name && mobile && email)){
+      let missingFields = []
+      if(!name){
+        missingFields.push("name")
+      }
+      if(!mobile){
+        missingFields.push("mobile")
+      }
+      if(!email){
+        missingFields.push("email")
+      }
+      if(!user){
+        missingFields.push("user")
+      }
+      throw new Error(`Invalid request, missing fields: ${missingFields.join(", ")}`)
+    }
+    const userDate = await getUserInfo({_id: user})
+    const updatedPartnerProfile = await updateCustomer({name: name, email: email, mobile: mobile, partner: userDate.partner})
+    return updatedPartnerProfile
+  } catch(err){
+    throw err
+  }
+}
+
+export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile };

@@ -5,8 +5,10 @@ import {
   getPartnerInfo,
   getUserInfo,
   getRoles,
+  updatePartnerProfile,
 } from "../services/info.js";
 import { validateCustomerRole } from "../middleware/customer-login-validation.js";
+import errorResponse from "../utils/response.js";
 
 const infoRouter = Router();
 
@@ -49,6 +51,21 @@ const getRolesHandler = async (_req, _res) => {
   }
 };
 
+//handler function to handle vendor and staff profile update(also can be used to update customer)
+const updatePartnerHandler = async (_req, _res) => {
+  try{
+    _res.status(200).json(await updatePartnerProfile(_req))
+  } catch(_e){
+    //invalid request
+    if(_e.message.toLowerCase().startsWith("invalid request")){
+      return errorResponse(_e, 400, _res)
+    }
+
+    //unhandeled server error!!
+    return errorResponse(_e, 500, _res)
+  }
+}
+
 infoRouter.post(
   "/info/customer/create",
   validateCustomerRole,
@@ -58,5 +75,7 @@ infoRouter.get("/info/account/:pid", getPartnerInfoHandler);
 infoRouter.get("/info/user/:id", getUserInfoHandler);
 infoRouter.get("/info/roles", getRolesHandler);
 
-//pagination offset limit in mongo
+// edit partner account
+infoRouter.put("/info/user", updatePartnerHandler)
+
 export default infoRouter;
