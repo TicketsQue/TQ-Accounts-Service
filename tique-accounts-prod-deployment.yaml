@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tique-accounts-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tique-accounts-service
+  template:
+    metadata:
+      labels:
+        app: tique-accounts-service
+    spec:
+      containers:
+        - name: tique-accounts-container
+          image: ticketsque/accounts-prod:1.2
+          ports:
+            - containerPort: 4121
+      imagePullSecrets:
+        - name: myregistrykey

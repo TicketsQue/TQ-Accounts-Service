@@ -49,13 +49,13 @@ const getUserInfo = async ({ _id }) => {
 
 const createVendorCustomer = async (_req) => {
   try {
-    const { mobile, email, name } = _req.body;
+    const { mobile, email, name, country_code } = _req.body;
     const partnerCheck = await getPartner({ mobile });
     if (partnerCheck) {
-      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email, partner: partnerCheck})
+      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email,country_code:country_code, partner: partnerCheck})
       return updatedPartnerData;
     }
-    const customerCreateRes = await createUser({ name, email, mobile });
+    const customerCreateRes = await createUser({ name, email, mobile, country_code });
     return customerCreateRes;
   } catch (err) {
     throw err;

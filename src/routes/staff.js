@@ -32,7 +32,7 @@ const phpOtpHandler = async (_req, _res) => {
 
 const addStaffHandler = async (_req, _res) => {
   try {
-    const response = await addStaff(_req.body);
+    const response = await addStaff(_req);
     return _res.status(200).json(response);
   } catch (_e) {
     console.log(_e);

@@ -7,13 +7,13 @@ import axios from "axios";
  */
 
 //handler method
-const customerCreate = async ({ name, email, mobile }) => {
+const customerCreate = async ({ name, email, mobile, country_code }) => {
   try {
     const partner = await getPartner({ mobile: mobile });
     if (partner) {
       return await checkUser({ mobile: mobile });
     } else {
-      await createUser({ name: name, email: email, mobile: mobile });
+      await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
       return await checkUser({ mobile: mobile });
     }
   } catch (err) {
@@ -22,7 +22,7 @@ const customerCreate = async ({ name, email, mobile }) => {
 };
 
 //handler method
-const customerSignInAndUpdate = async ({ name, email, user, otp }) => {
+const customerSignInAndUpdate = async ({ name, email, user, country_code, otp }) => {
   try {
     const partner = await getPartner({ mobile: user });
     if (!partner) {
@@ -34,6 +34,7 @@ const customerSignInAndUpdate = async ({ name, email, user, otp }) => {
         name: name,
         email: email,
         mobile: user,
+        country_code: country_code,
         partner: partner,
       });
     }
@@ -97,7 +98,7 @@ const checkUser = async ({ mobile }) => {
  * @param {Object} param the object should contain the name, email and mobile of users and the partner object
  * @returns {Object} returns the updated field value
  */
-const updateCustomer = async ({ name, email, mobile, partner }) => {
+const updateCustomer = async ({ name, email, mobile, country_code, partner }) => {
   try {
     // const partner = await getPartner({mobile: mobile}) // previous logic
     if (!partner) {
@@ -109,6 +110,7 @@ const updateCustomer = async ({ name, email, mobile, partner }) => {
       {
         name: name,
         mobile: mobile,
+        country_code: country_code,
         email: email,
       }
     );
@@ -123,7 +125,7 @@ const updateCustomer = async ({ name, email, mobile, partner }) => {
  * @param {Object} param The object should contain the user name, email and mobile
  * @returns {Object} returns the created user(partner in db) field
  */
-const createPartner = async ({ name, email, mobile }) => {
+const createPartner = async ({ name, email, mobile, country_code}) => {
   try {
     const response = await axios.post(
       //System service URL
@@ -133,6 +135,7 @@ const createPartner = async ({ name, email, mobile }) => {
         name: name,
         email: email,
         mobile: mobile,
+        country_code: country_code,
         status: true,
       }
     );
@@ -187,12 +190,14 @@ const getCustomerRole = async () => {
  * @param {Object} param An object with users name, email and mobile
  * @returns {Object} returns the user created
  */
-const createUser = async ({ name, email, mobile }) => {
+const createUser = async ({ name, email, mobile, country_code }) => {
+  // console.log(code)
   try {
     const customerRole = await getCustomerRole();
     const partner = await createPartner({
       name: name,
       email: email,
+      country_code: country_code,
       mobile: mobile,
     });
     const userData = await axios.post(

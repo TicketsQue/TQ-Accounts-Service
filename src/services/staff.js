@@ -1,5 +1,5 @@
 import axios from "axios";
-import { checkUser, customerSignIn } from "./customer.js";
+import { checkUser, customerSignIn, getPartner } from "./customer.js";
 
 const getToken = async ({ mobile }) => {
   try {
@@ -108,12 +108,23 @@ const otpWithPhp = async (creds) => {
 const addStaff = async (_req) => {
   try {
     //URL 'SYSTEM_SERVER' for the system service is added in .env
+    const {mobile} = _req.body.user
+    if(!mobile){
+      throw new Error("Invalid request")
+    }
+    const partner = await getPartner({mobile: mobile})
+    if(partner){
+      throw new Error("Mobile number already registered")
+    }
     const response = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/partners/staff-onboard`,
-      _req
+      _req.body
     );
     return response.data;
   } catch (errors) {
+    if(errors.response?.data){
+      throw new Error(errors.response.data)
+    }
     throw errors;
   }
 };
@@ -135,7 +146,8 @@ const getStaff = async (_req) => {
   try {
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     const response = await axios.get(
-      `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`
+      `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`,
+        { params: { search: _req.query.search || "", page: _req.query.page || 0 } }
     );
     return response.data;
   } catch (errors) {
