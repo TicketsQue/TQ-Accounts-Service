@@ -1,5 +1,5 @@
 import axios from "axios";
-import { checkUser, customerSignIn, getPartner } from "./customer.js";
+import { checkUser, customerSignIn, getPartner, getPartnerType } from "./customer.js";
 
 const getToken = async ({ mobile }) => {
   try {
@@ -112,9 +112,15 @@ const addStaff = async (_req) => {
     if(!mobile){
       throw new Error("Invalid request")
     }
-    const partner = await getPartner({mobile: mobile})
-    if(partner){
-      throw new Error("Mobile number already registered")
+    const partnerInfo = await getPartner({mobile: mobile})
+
+    if(partnerInfo.length>0){
+      for(let i=0;i<partnerInfo.length;i++){
+        const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
+        if(partnerType.handle === 'user'){
+          throw new Error("Partner already registered, Please login to dashboard")
+        }
+      }
     }
     const response = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/partners/staff-onboard`,

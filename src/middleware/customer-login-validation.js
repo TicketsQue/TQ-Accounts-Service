@@ -7,14 +7,17 @@ const validateCustomerRole = async (_req, _res, _next) => {
             return _res.status(400).json({"result":"invalid request"})
         }
         const partnerInfo = await getPartner({mobile})
-        if(!partnerInfo){
+        if(partnerInfo.length === 0){
             return _next()
         }
-        const partnerType = await getPartnerType({_id: partnerInfo.partner_type})
-        if(partnerType.handle === 'customer'){
-            return _next()
+        for(let i=0;i<partnerInfo.length;i++){
+            const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
+            if(partnerType.handle === 'customer'){
+                _req.body.partner_info = partnerInfo[i]
+                return _next()
+            }
         }
-        return _res.status(403).json({result: "Already registered as a partner, use different mobile number."})
+        return _next()
     } catch(err){
         throw err
     }

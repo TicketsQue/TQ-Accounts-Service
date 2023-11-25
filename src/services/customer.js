@@ -7,10 +7,9 @@ import axios from "axios";
  */
 
 //handler method
-const customerCreate = async ({ name, email, mobile, country_code }) => {
+const customerCreate = async ({ name, email, mobile, country_code, partner_info }) => {
   try {
-    const partner = await getPartner({ mobile: mobile });
-    if (partner) {
+    if (partner_info) {
       return await checkUser({ mobile: mobile });
     } else {
       await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
@@ -24,8 +23,19 @@ const customerCreate = async ({ name, email, mobile, country_code }) => {
 //handler method
 const customerSignInAndUpdate = async ({ name, email, user, country_code, otp }) => {
   try {
-    const partner = await getPartner({ mobile: user });
-    if (!partner) {
+    const partnerInfo = await getPartner({ mobile: user });
+    if (partnerInfo.length === 0) {
+      throw new Error("user does not exist");
+    }
+    let partner = null
+    for(let i=0;i<partnerInfo.length;i++){
+      const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
+      if(partnerType.handle === 'customer'){
+          partner = partnerInfo[i]
+          break
+      }
+    }
+    if(!partner){
       throw new Error("user does not exist");
     }
     const signInResponse = await customerSignIn({ mobile: user, otp: otp });
@@ -85,7 +95,12 @@ const checkUser = async ({ mobile }) => {
   try {
     const response = await axios.get(
       //System service URL
-      `${process.env.SYSTEM_SERVER}/system/users/check?user=${mobile}`
+      `${process.env.SYSTEM_SERVER}/system/users/check?user=${mobile}`,
+      {
+        headers: {
+            'Origin': process.env.CUSTOMER_BASE_URL, 
+        }
+      }
     );
     return response.data;
   } catch (err) {
@@ -157,6 +172,11 @@ const customerSignIn = async ({ mobile, otp }) => {
       {
         user: mobile,
         otp: otp,
+      },
+      {
+        headers:{
+          'Origin': process.env.CUSTOMER_BASE_URL, 
+        }
       }
     );
     await axios.post(
@@ -228,7 +248,12 @@ const createUser = async ({ name, email, mobile, country_code }) => {
 const getPartner = async ({ mobile }) => {
   try {
     const partner = await axios.get(
-      `${process.env.SYSTEM_SERVER}/system/partners/lookup?mobile=${mobile}`
+      `${process.env.SYSTEM_SERVER}/system/partners/lookup?mobile=${mobile}`,
+      {
+        params: {
+          look_many: "true"
+        }
+      }
     );
     return partner.data;
   } catch (err) {

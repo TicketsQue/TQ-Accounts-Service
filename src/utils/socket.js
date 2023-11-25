@@ -22,7 +22,7 @@ class SystemSocket {
     );
     this.socket.on("entities", (_response) => {
       cache.setEntities(_response);
-      EM.migrate();
+      // EM.migrate();
     });
   }
 

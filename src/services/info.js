@@ -49,15 +49,20 @@ const getUserInfo = async ({ _id }) => {
 
 const createVendorCustomer = async (_req) => {
   try {
-    const { mobile, email, name, country_code } = _req.body;
-    const partnerCheck = await getPartner({ mobile });
-    if (partnerCheck) {
-      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email,country_code:country_code, partner: partnerCheck})
+    const { mobile, email, name, country_code, partner_info } = _req.body;
+    if (partner_info) {
+      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email,country_code:country_code, partner: partner_info})
       return updatedPartnerData;
     }
     const customerCreateRes = await createUser({ name, email, mobile, country_code });
     return customerCreateRes;
   } catch (err) {
+    if(err.response?.data?.startsWith("Partner validation failed")){
+      throw new Error("Invalid request, fields missmatch")
+    }
+    if(err.response?.data){
+      throw new Error(err.response.data)
+    }
     throw err;
   }
 };
