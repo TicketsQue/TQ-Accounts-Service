@@ -1,5 +1,6 @@
 import axios from "axios";
 import { checkUser, customerSignIn, getPartner, getPartnerType } from "./customer.js";
+import { getUserInfo } from "./info.js";
 
 const getToken = async ({ mobile }) => {
   try {
@@ -137,6 +138,17 @@ const addStaff = async (_req) => {
 
 const updateStaff = async (_req) => {
   try {
+    // get partner and check the role
+    if(!_req.headers.user){
+      throw new Error("Invalid Request")
+    }
+    const partnerUpdateCurrent = await getUserInfo({_id: _req.params.id})
+    if(partnerUpdateCurrent.role.handle === "admin" && _req.headers.user !== _req.params.id){
+      throw new Error("Cannot edit admin details")
+    }
+    if(partnerUpdateCurrent.role.handle === "admin" && partnerUpdateCurrent.role._id !== _req.body.role) {
+      throw new Error("Cannot change admin role")
+    }
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     const response = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/users/${_req.params.id}`,
