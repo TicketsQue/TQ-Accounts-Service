@@ -16,6 +16,9 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
       return await checkUser({ mobile: mobile });
     }
   } catch (err) {
+    if(err.response?.data){
+      throw new Error(err.response.data)
+    }
     throw err;
   }
 };
