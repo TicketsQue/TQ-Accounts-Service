@@ -73,7 +73,7 @@ infoRouter.post(
 );
 infoRouter.get("/info/account/:pid", getPartnerInfoHandler);
 infoRouter.get("/info/user/:id", getUserInfoHandler);
-infoRouter.get("/info/roles", getRolesHandler);
+// infoRouter.put("info/user/:id", updatePart)
 
 // edit partner account
 infoRouter.put("/info/user", updatePartnerHandler)

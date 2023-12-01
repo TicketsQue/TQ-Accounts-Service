@@ -11,8 +11,8 @@ const validateCustomerRole = async (_req, _res, _next) => {
             return _next()
         }
         for(let i=0;i<partnerInfo.length;i++){
-            const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
-            if(partnerType.handle === 'customer'){
+            // const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
+            if(partnerInfo[i].partner_type.handle === 'customer'){
                 _req.body.partner_info = partnerInfo[i]
                 return _next()
             }

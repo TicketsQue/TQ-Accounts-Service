@@ -32,8 +32,8 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp })
     }
     let partner = null
     for(let i=0;i<partnerInfo.length;i++){
-      const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
-      if(partnerType.handle === 'customer'){
+      // const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type}) //old logic
+      if(partnerInfo[i].partner_type.handle === 'customer'){
           partner = partnerInfo[i]
           break
       }

@@ -55,6 +55,7 @@ const signinWithPhp = async (creds, _res) => {
       `${process.env.GATEWAY_SERVER}/gateway/user/session`,
       user?.payload
     );
+    delete user.otp
     node = user.payload;
 
     return { php, node };
@@ -95,7 +96,7 @@ const otpWithPhp = async (creds) => {
     return response.data;
   } catch (error) {
     try {
-      const user = await checkUser({ mobile: creds?.phone });
+      const user = await staffCheckUser({ mobile: creds?.phone });
       if (user.payload.role === "Customer") {
         throw new Error("Access denied");
       }
@@ -170,6 +171,18 @@ const getStaff = async (_req) => {
     return response.data;
   } catch (errors) {
     throw errors;
+  }
+};
+
+const staffCheckUser = async ({ mobile }) => {
+  try {
+    const response = await axios.get(
+      //System service URL
+      `${process.env.SYSTEM_SERVER}/system/users/check?user=${mobile}`,
+    );
+    return response.data;
+  } catch (err) {
+    throw err;
   }
 };
 

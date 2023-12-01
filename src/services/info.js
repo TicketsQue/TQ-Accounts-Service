@@ -43,6 +43,9 @@ const getUserInfo = async ({ _id }) => {
     delete userData.last_access;
     return userData;
   } catch (err) {
+    if(err.response?.data){
+      throw new Error(err.response?.data)
+    }
     throw err;
   }
 };
