@@ -93,6 +93,7 @@ const otpWithPhp = async (creds) => {
       data: data,
     };
     const response = await axios.request(config);
+    delete response.data.otp
     return response.data;
   } catch (error) {
     try {
@@ -118,8 +119,8 @@ const addStaff = async (_req) => {
 
     if(partnerInfo.length>0){
       for(let i=0;i<partnerInfo.length;i++){
-        const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
-        if(partnerType.handle === 'user'){
+        // const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type})
+        if(partnerInfo[i].partner_type.handle === 'user'){
           throw new Error("Partner already registered, Please login to dashboard")
         }
       }
