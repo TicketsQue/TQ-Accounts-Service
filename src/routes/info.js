@@ -6,9 +6,11 @@ import {
   getUserInfo,
   getRoles,
   updatePartnerProfile,
+  getCustomerSuggesions,
 } from "../services/info.js";
 import { validateCustomerRole } from "../middleware/customer-login-validation.js";
 import errorResponse from "../utils/response.js";
+import multer from "../middleware/multer.js";
 
 const infoRouter = Router();
 
@@ -66,6 +68,22 @@ const updatePartnerHandler = async (_req, _res) => {
   }
 }
 
+const getCustomerSuggesionHandler = async(_req, _res) => {
+  try{
+    return _res.status(200).json(await getCustomerSuggesions(_req))
+  } catch(_e){
+    if(_e.message.toLowerCase().startsWith("invalid request")){
+      return errorResponse(_e, 400, _res)
+    }
+    if(_e.message.toLowerCase().endsWith("not found")){
+      return errorResponse(_e, 404, _res)
+    }
+    return errorResponse(_e, 500, _res)
+  }
+}
+
+
+
 infoRouter.post(
   "/info/customer/create",
   validateCustomerRole,
@@ -74,9 +92,10 @@ infoRouter.post(
 infoRouter.get("/info/account/:pid", getPartnerInfoHandler);
 infoRouter.get("/info/user/:id", getUserInfoHandler);
 infoRouter.get("/info/roles", getRolesHandler)
-// infoRouter.put("info/user/:id", updatePart)
+
+infoRouter.get("/info/customer/suggestion", getCustomerSuggesionHandler)
 
 // edit partner account
-infoRouter.put("/info/user", updatePartnerHandler)
+infoRouter.put("/info/user",multer.fields([{name: "profile_img" ,maxCount:1}]) ,updatePartnerHandler)
 
 export default infoRouter;
