@@ -142,6 +142,9 @@ const updatePartnerProfile = async (_req) => {
     );
     return updateResponse.data
   } catch(err){
+    if(err.response?.data){
+      throw new Error(err.response?.data)
+    }
     throw err
   }
 }
