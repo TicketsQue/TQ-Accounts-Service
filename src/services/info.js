@@ -1,5 +1,6 @@
 import axios from "axios";
 import { createUser, getPartner, updateCustomer } from "./customer.js";
+import { getSignedLink, uploadToS3 } from "../helpers/s3.js";
 /**
  * making API call to fetch partner information from SYSTEM service
  * @param {string} pid The partner_id whose information needs to be fetched
@@ -70,34 +71,82 @@ const createVendorCustomer = async (_req) => {
   }
 };
 
-const updatePartnerProfile = async (_req) => {
+const getCustomerSuggesions = async (_req) => {
   try{
-    const user = _req.headers.user
-    const name = _req.body.name
-    const mobile = _req.body.mobile
-    const email = _req.body.email
-    if(!(user && name && mobile && email)){
-      let missingFields = []
-      if(!name){
-        missingFields.push("name")
-      }
-      if(!mobile){
-        missingFields.push("mobile")
-      }
-      if(!email){
-        missingFields.push("email")
-      }
-      if(!user){
-        missingFields.push("user")
-      }
-      throw new Error(`Invalid request, missing fields: ${missingFields.join(", ")}`)
+    const { user } = _req.headers
+    const mobile  = _req.query.mobile || null
+    if(!user){
+      throw new Error("Invalid request")
     }
-    const userDate = await getUserInfo({_id: user})
-    const updatedPartnerProfile = await updateCustomer({name: name, email: email, mobile: mobile, partner: userDate.partner})
-    return updatedPartnerProfile
-  } catch(err){
+    const userData = await getUserInfo({_id: user})
+    const vendor = userData?.vendor?._id
+    const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`)
+    if(!mobile){
+      return vendorCustomersList.data
+    }
+    //filter according to mobile number
+    const customerData = vendorCustomersList.data.payload.find(data => data.customer?.mobile === mobile)
+    if(!customerData){
+      throw new Error("Customer not found")
+    }
+    const customer = customerData.customer
+    return {
+      payload:{
+        name: customer.name,
+        mobile: customer.mobile,
+        email: customer.email
+      }
+    }
+    
+  }catch(err){
+    if(err.response?.data){
+      console.log(err.response.data)
+      throw new Error(err.response.data)
+    }
     throw err
   }
 }
 
-export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile };
+const updatePartnerProfile = async (_req) => {
+  try{
+    const userProfileImg = _req.files['profile_img']
+    const user = _req.headers.user
+    const name = _req.body.name
+    const mobile = _req.body.mobile
+    const email = _req.body.email
+    const countryCode = _req.body.country_code
+    if(!(user)){
+      throw new Error(`Invalid request`)
+    }
+    const updateData = {}
+    if(name){
+      updateData.name = name
+    }
+    if(mobile){
+      updateData.mobile = mobile
+    }
+    if(email){
+      updateData.email = email
+    }
+    if(countryCode){
+      updateData.country_code = countryCode
+    }
+    const userDate = await getUserInfo({_id: user})
+    if(userProfileImg && userProfileImg?.length === 1){
+      const imgData = await uploadToS3({file: userProfileImg[0], vendorID: userDate?.vendor?._id, userID: user, })
+      updateData.profile_img = imgData.object_key
+    }
+    const updateResponse = await axios.put(
+      `${process.env.SYSTEM_SERVER}/system/users/${user}`,
+      updateData
+    );
+    return updateResponse.data
+  } catch(err){
+    if(err.response?.data){
+      throw new Error(err.response?.data)
+    }
+    throw err
+  }
+}
+
+export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions };
