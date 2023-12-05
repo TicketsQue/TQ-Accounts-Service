@@ -80,10 +80,15 @@ const getCustomerSuggesions = async (_req) => {
     }
     const userData = await getUserInfo({_id: user})
     const vendor = userData?.vendor?._id
-    const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`)
+    const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`,
+      {
+        params: _req.query,
+      }
+    )
     if(!mobile){
       return vendorCustomersList.data
     }
+    console.log(vendorCustomersList.data.payload[0].customer)
     //filter according to mobile number
     const customerData = vendorCustomersList.data.payload.find(data => data.customer?.mobile === mobile)
     if(!customerData){
@@ -121,9 +126,6 @@ const updatePartnerProfile = async (_req) => {
     const updateData = {}
     if(name){
       updateData.name = name
-    }
-    if(mobile){
-      updateData.mobile = mobile
     }
     if(email){
       updateData.email = email

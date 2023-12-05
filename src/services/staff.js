@@ -151,6 +151,22 @@ const updateStaff = async (_req) => {
     if(partnerUpdateCurrent.role.handle === "admin" && partnerUpdateCurrent.role._id !== _req.body.role) {
       throw new Error("Cannot change admin role")
     }
+    // check if mobile numbile number already exists for  any staff
+    // _req.params.vendor = partnerUpdateCurrent.vendor._id.toString()
+    // const staffList = await getStaff(_req)
+    // staffList.payload.forEach((staff) => {
+    //   if(staff.mobile === _req.body.mobile){
+    //     throw new Error("Mobile number already exists")
+    //   }
+    // })
+
+    //check if staff alread exists
+    const staffList = await getPartner({mobile: _req.body.mobile})
+    staffList.forEach((user) => {
+      if(user.partner_type?.handle === 'user'){
+        throw new Error("staff already exists")
+      }
+    })
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     const response = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/users/${_req.params.id}`,
@@ -169,7 +185,16 @@ const getStaff = async (_req) => {
       `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`,
         { params: { search: _req.query.search || "", page: _req.query.page || 0 } }
     );
-    return response.data;
+    const staffList = response.data
+    const staffListUpdated = staffList.payload.map((staff) => {
+      staff.user = staff.user.map((user) => {
+        const {password, otp, ...fields} = user
+        return fields
+      })
+      return staff
+    })
+    staffList.payload = staffListUpdated
+    return staffList
   } catch (errors) {
     throw errors;
   }
