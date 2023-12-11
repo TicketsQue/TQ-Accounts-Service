@@ -1,6 +1,7 @@
 import axios from "axios";
 import { createUser, getPartner, updateCustomer } from "./customer.js";
 import { getSignedLink, uploadToS3 } from "../helpers/s3.js";
+import { capitalize } from "../utils/strings.js";
 /**
  * making API call to fetch partner information from SYSTEM service
  * @param {string} pid The partner_id whose information needs to be fetched
@@ -80,7 +81,11 @@ const getCustomerSuggesions = async (_req) => {
     }
     const userData = await getUserInfo({_id: user})
     const vendor = userData?.vendor?._id
-    const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`)
+    const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`,
+      {
+        params: _req.query,
+      }
+    )
     if(!mobile){
       return vendorCustomersList.data
     }
@@ -111,7 +116,7 @@ const updatePartnerProfile = async (_req) => {
   try{
     const userProfileImg = _req.files['profile_img']
     const user = _req.headers.user
-    const name = _req.body.name
+    const name = capitalize(_req.body.name)
     const mobile = _req.body.mobile
     const email = _req.body.email
     const countryCode = _req.body.country_code
@@ -121,9 +126,6 @@ const updatePartnerProfile = async (_req) => {
     const updateData = {}
     if(name){
       updateData.name = name
-    }
-    if(mobile){
-      updateData.mobile = mobile
     }
     if(email){
       updateData.email = email

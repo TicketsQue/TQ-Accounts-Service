@@ -1,6 +1,7 @@
 import axios from "axios";
 import { checkUser, customerSignIn, getPartner, getPartnerType } from "./customer.js";
 import { getUserInfo } from "./info.js";
+import { capitalize } from "../utils/strings.js";
 
 const getToken = async ({ mobile }) => {
   try {
@@ -125,6 +126,7 @@ const addStaff = async (_req) => {
         }
       }
     }
+    _req.body.name = capitalize(_req.body.name)
     const response = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/partners/staff-onboard`,
       _req.body
@@ -151,7 +153,26 @@ const updateStaff = async (_req) => {
     if(partnerUpdateCurrent.role.handle === "admin" && partnerUpdateCurrent.role._id !== _req.body.role) {
       throw new Error("Cannot change admin role")
     }
+    // check if mobile numbile number already exists for  any staff
+    // _req.params.vendor = partnerUpdateCurrent.vendor._id.toString()
+    // const staffList = await getStaff(_req)
+    // staffList.payload.forEach((staff) => {
+    //   if(staff.mobile === _req.body.mobile){
+    //     throw new Error("Mobile number already exists")
+    //   }
+    // })
+
+    //check if staff alread exists
+    const staffList = await getPartner({mobile: _req.body.mobile})
+    const userData = await getUserInfo({_id: _req.params.id})
+    staffList.forEach((user) => {
+      if((user.partner_type?.handle === 'user') && (user.mobile === _req.body.mobile) && (user._id !== userData.partner._id)){
+        throw new Error("staff already exists")
+      }
+    })
     //URL 'SYSTEM_SERVER' for the system service is added in .env
+    _req.body.name = capitalize(_req.body.name)
+    console.log(_req.body.name)
     const response = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/users/${_req.params.id}`,
       _req.body
@@ -169,7 +190,16 @@ const getStaff = async (_req) => {
       `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`,
         { params: { search: _req.query.search || "", page: _req.query.page || 0 } }
     );
-    return response.data;
+    const staffList = response.data
+    const staffListUpdated = staffList.payload.map((staff) => {
+      staff.user = staff.user.map((user) => {
+        const {password, otp, ...fields} = user
+        return fields
+      })
+      return staff
+    })
+    staffList.payload = staffListUpdated
+    return staffList
   } catch (errors) {
     throw errors;
   }

@@ -45,7 +45,6 @@ const updateStaffHandler = async (_req, _res) => {
     const response = await updateStaff(_req);
     return _res.status(200).json(response);
   } catch (_e) {
-    console.log(_e);
     Utils.handleError(_e, _res);
   }
 };
@@ -55,7 +54,6 @@ const getStaffHandler = async (_req, _res) => {
     const response = await getStaff(_req);
     return _res.status(200).json(response);
   } catch (_e) {
-    console.log(_e);
     Utils.handleError(_e, _res);
   }
 };
