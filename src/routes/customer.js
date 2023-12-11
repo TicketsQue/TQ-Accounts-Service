@@ -11,7 +11,6 @@ const customerRouter = Router();
 
 const customerCreateHandler = async (_req, _res) => {
   try {
-    // console.log("create customer called")
     const response = await customerCreate(_req.body);
     _res.status(200).json(response);
   } catch (_e) {

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { capitalize } from "../utils/strings.js";
 
 /**
  * A function to create new customer using the system service
@@ -126,7 +127,7 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
     const updateResponse = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/partners/${partner._id}`,
       {
-        name: name,
+        name: capitalize(name),
         mobile: mobile,
         country_code: country_code,
         email: email,
@@ -150,7 +151,7 @@ const createPartner = async ({ name, email, mobile, country_code}) => {
       `${process.env.SYSTEM_SERVER}/system/partners`,
       {
         //Objects passed to system service endpoint
-        name: name,
+        name: capitalize(name),
         email: email,
         mobile: mobile,
         country_code: country_code,
@@ -214,7 +215,6 @@ const getCustomerRole = async () => {
  * @returns {Object} returns the user created
  */
 const createUser = async ({ name, email, mobile, country_code }) => {
-  // console.log(code)
   try {
     const customerRole = await getCustomerRole();
     const partner = await createPartner({

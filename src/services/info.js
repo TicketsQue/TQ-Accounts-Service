@@ -1,6 +1,7 @@
 import axios from "axios";
 import { createUser, getPartner, updateCustomer } from "./customer.js";
 import { getSignedLink, uploadToS3 } from "../helpers/s3.js";
+import { capitalize } from "../utils/strings.js";
 /**
  * making API call to fetch partner information from SYSTEM service
  * @param {string} pid The partner_id whose information needs to be fetched
@@ -88,7 +89,6 @@ const getCustomerSuggesions = async (_req) => {
     if(!mobile){
       return vendorCustomersList.data
     }
-    console.log(vendorCustomersList.data.payload[0].customer)
     //filter according to mobile number
     const customerData = vendorCustomersList.data.payload.find(data => data.customer?.mobile === mobile)
     if(!customerData){
@@ -116,7 +116,7 @@ const updatePartnerProfile = async (_req) => {
   try{
     const userProfileImg = _req.files['profile_img']
     const user = _req.headers.user
-    const name = _req.body.name
+    const name = capitalize(_req.body.name)
     const mobile = _req.body.mobile
     const email = _req.body.email
     const countryCode = _req.body.country_code
