@@ -90,7 +90,7 @@ const getCustomerSuggesions = async (_req) => {
       return vendorCustomersList.data
     }
     //filter according to mobile number
-    const customerData = vendorCustomersList.data.payload.find(data => data.customer?.mobile === mobile)
+    const customerData = vendorCustomersList.data.allCustomers.find(data => data.customer?.mobile === mobile)
     if(!customerData){
       throw new Error("Customer not found")
     }
