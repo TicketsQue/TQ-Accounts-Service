@@ -156,6 +156,10 @@ const updatePartnerProfile = async (_req) => {
 //ticket orders info
 const getTicketOrderInfo = async (_req) => {
   try{
+    const user = _req.headers.user
+    if(!user){
+      throw new Error("Unauthorized request")
+    }
     const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
     const eventModel = await EM.getModel("eventsDB", "events");
     const ticketParamMap = await EM.getModel("ticketsDB", "ticket_param_mapping");
@@ -163,19 +167,32 @@ const getTicketOrderInfo = async (_req) => {
     const page = parseInt(_req.query.page) || 0;
     const skip = page * parseInt(process.env.PAGE_SIZE);
     const limit = parseInt(process.env.PAGE_SIZE);
+    const currentUser = await getUserInfo({_id: user})
+    const vendor = _req.query.vendor ? true : false
+    if(!(currentUser.role.handle === "sub-admin" || currentUser.role.handle === "admin" || currentUser.role.handle === "system" )){
+      throw new Error("Access Denied")
+    }
     if(ticketOrders){
-      const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}}
+      const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
       let searchConfig = []
       if (search) {
         searchConfig.push({ "customer_mobile": { $regex: new RegExp(search, "i") } })
         searchConfig.push({ "customer_name": { $regex: new RegExp(search, "i") }  })
       }
+
       let query = { ...findConfig };
 
       if (searchConfig.length > 0) {
         query = {
           $and: [findConfig, { $or: searchConfig }],
         };
+      }
+      if(vendor){
+        if(currentUser.role.handle === "system"){
+          findConfig.vendor = vendor
+        } else {
+          findConfig.vendor = currentUser?.vendor?._id
+        }
       }
       const _count = await ticketOrders.countDocuments(query)
       const ordersData = await ticketOrders.find(query)
