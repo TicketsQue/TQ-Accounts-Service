@@ -7,6 +7,7 @@ import {
   getRoles,
   updatePartnerProfile,
   getCustomerSuggesions,
+  getTicketOrderInfo,
 } from "../services/info.js";
 import { validateCustomerRole } from "../middleware/customer-login-validation.js";
 import errorResponse from "../utils/response.js";
@@ -82,6 +83,14 @@ const getCustomerSuggesionHandler = async(_req, _res) => {
   }
 }
 
+const getTicketsPaymentInfoHandler = async (_req, _res) => {
+  try{
+    return _res.status(200).json(await getTicketOrderInfo(_req))
+  } catch(_e){
+    return errorResponse(_e, 500, _res)
+  }
+}
+
 
 
 infoRouter.post(
@@ -97,5 +106,8 @@ infoRouter.get("/info/customer/suggestion", getCustomerSuggesionHandler)
 
 // edit partner account
 infoRouter.put("/info/user",multer.fields([{name: "profile_img" ,maxCount:1}]) ,updatePartnerHandler)
+
+//get ticket orders data
+infoRouter.get("/info/tickets/orders", getTicketsPaymentInfoHandler)
 
 export default infoRouter;

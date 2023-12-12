@@ -37,10 +37,10 @@ class DbManager {
         
             /* Init system DB connection */
             await this.createConnection(process.env.SYSTEM_MONGO_HOST, process.env.SYSTEM_MONGO_PORT, process.env.SYSTEM_MONGO_DB);
-            /* Init event DB connection */
-            await this.createConnection(process.env.EVENT_MONGO_HOST, process.env.EVENT_MONGO_PORT, process.env.EVENT_MONGO_DB);
             /* Init ticket DB connection */
-            //await this.createConnection(process.env.SYSTEM_MONGO_HOST, process.env.SYSTEM_MONGO_PORT, process.env.SYSTEM_MONGO_DB);
+            await this.createConnection(process.env.TICKET_MONGO_HOST, process.env.TICKET_MONGO_PORT, process.env.TICKET_MONGO_DB);
+            /* Init event DB connection */
+            await this.createConnection(process.env.TICKET_MONGO_HOST, process.env.TICKET_MONGO_PORT, process.env.EVENT_MONGO_DB);
 
         } catch (_e) {
             console.error(_e.stack);
