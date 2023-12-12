@@ -2,6 +2,8 @@ import axios from "axios";
 import { createUser, getPartner, updateCustomer } from "./customer.js";
 import { getSignedLink, uploadToS3 } from "../helpers/s3.js";
 import { capitalize } from "../utils/strings.js";
+import EM from "../utils/entity.js";
+import Utils from "../utils/utils.js";
 /**
  * making API call to fetch partner information from SYSTEM service
  * @param {string} pid The partner_id whose information needs to be fetched
@@ -151,4 +153,142 @@ const updatePartnerProfile = async (_req) => {
   }
 }
 
-export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions };
+//ticket orders info
+const getTicketOrderInfo = async (_req) => {
+  try{
+    const user = _req.headers.user
+    if(!user){
+      throw new Error("Unauthorized request")
+    }
+    const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
+    const eventModel = await EM.getModel("eventsDB", "events");
+    const ticketParamMap = await EM.getModel("ticketsDB", "ticket_param_mapping");
+    const search = _req.query.search ? _req.query.search : null;
+    const page = parseInt(_req.query.page) || 0;
+    const skip = page * parseInt(process.env.PAGE_SIZE);
+    const limit = parseInt(process.env.PAGE_SIZE);
+    const currentUser = await getUserInfo({_id: user})
+    const vendor = _req.query.vendor ? true : false
+    if(!(currentUser.role.handle === "sub-admin" || currentUser.role.handle === "admin" || currentUser.role.handle === "system" )){
+      throw new Error("Access Denied")
+    }
+    if(ticketOrders){
+      const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
+      let searchConfig = []
+      if (search) {
+        searchConfig.push({ "customer_mobile": { $regex: new RegExp(search, "i") } })
+        searchConfig.push({ "customer_name": { $regex: new RegExp(search, "i") }  })
+      }
+
+      let query = { ...findConfig };
+
+      if (searchConfig.length > 0) {
+        query = {
+          $and: [findConfig, { $or: searchConfig }],
+        };
+      }
+      if(vendor){
+        if(currentUser.role.handle === "system"){
+          findConfig.vendor = vendor
+        } else {
+          findConfig.vendor = currentUser?.vendor?._id
+        }
+      }
+      const _count = await ticketOrders.countDocuments(query)
+      const ordersData = await ticketOrders.find(query)
+      .sort({createdAt:-1})
+      .skip(skip)
+      .limit(limit)
+
+      let payload = []
+      for(let i=0;i<ordersData?.length;i++){
+        let temp = {}
+        let customer_data = await getPartnerByPartnerId({id: ordersData[i].customer_id})
+        if(!customer_data){
+          try{
+            customer_data = (await getUserInfo({ _id: ordersData[i].customer_id})).partner
+          }
+           catch(err){
+            if(err?.message === "User not found"){
+              customer_data = null
+            } else {
+              console.log(err)
+            }
+          }
+        }
+        temp.customer_data = customer_data
+        let event_data = await eventModel.findOne({_id: ordersData[i].association}).lean()
+        temp.event_data = event_data
+        let vendor_data = await getPartnerByPartnerId({id: ordersData[i].vendor})
+        temp.vendor_data = vendor_data
+        let payment_data = {}
+        payment_data.total_price = ordersData[i]?.total_price
+        payment_data.platform_fee = ordersData[i]?.platform_fee 
+        payment_data.gst_fee = ordersData[i]?.gst_fee
+        payment_data.payment_status = ordersData[i]?.payment_status
+        temp.payment_data = payment_data
+        const packageJson = ordersData[i].packages.map(pack => JSON.parse(pack))
+        let package_data = []
+        for(let j=0;j<packageJson?.length; j++){
+          let pack_map_id = packageJson[j]?.ticket_pack_map_id
+          if(!pack_map_id){
+            pack_map_id = packageJson[j]?.ticket_mapping_id
+          }
+          let packages = 
+            await ticketParamMap.findById({_id:pack_map_id})
+            .populate([
+              {
+                path: "ticket_param",
+                model: "ticket_params",
+              },
+              {
+                path: "package_map",
+                model: "package_map",
+                populate: [
+                  {
+                    path: "package",
+                    model: "packages",
+                  },
+                  { path: "param", model: "package_params" },
+                ],
+              },
+            ])
+            .lean()
+          // let quantity = {quantity: packageJson[j].qty}
+          package_data.push({packages, quantity: packageJson[j].qty });
+        }
+        temp.package_data = package_data
+        temp._id = ordersData[i]._id.toString()
+        temp.createdAt = ordersData[i].createdAt
+
+        payload.push(temp)
+      }
+
+      return {
+        total_records: _count,
+        totalPages: Math.ceil(_count / process.env.PAGE_SIZE),
+        recordPerPage: parseInt(process.env.PAGE_SIZE),
+        currentPage: page,
+        _payload: payload
+      };
+
+    }
+    throw new Error("Ticket orders model error!")
+  } catch(err){
+    throw err
+  }
+}
+
+//utils 
+const getPartnerByPartnerId = async ({ id }) => {
+  try {
+    return (await Utils.contactSystem("get", "/system/partners/" + id)).data
+  } catch (err) {
+    if(err?.response?.data){
+      throw new Error(err.response.data)
+    }
+    throw err;
+  }
+};
+
+export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions, getTicketOrderInfo };

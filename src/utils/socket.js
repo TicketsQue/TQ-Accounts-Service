@@ -17,16 +17,28 @@ class SystemSocket {
     this.socket = io.connect(process.env.SYSTEM_SOCKET_SERVER, {
       reconnection: true,
     });
-    this.socket.on("connect", () =>
+    this.socket.on("connect", () => {
       this.socket.emit("register", process.env.SERVICE_HANDLE)
+      this.socket.emit("register", process.env.SERVICE_HANDLE2)
+      this.socket.emit("register", process.env.SERVICE_HANDLE3)
+    }
     );
-    this.socket.on("entities", (_response) => {
-      cache.setEntities(_response);
-      // EM.migrate();
+    this.socket.on("entities", (_response1) => {
+      this.socket.on("entities", (_response_2) => {
+        this.socket.on("entities", (_response_3) => {
+          console.log({..._response1, ..._response_2, ..._response_3});
+          cache.setEntities({..._response1, ..._response_2, ..._response_3});
+        // EM.migrate();
+        })
+      })
     });
   }
 
-  init = () => this.socket.emit("entities", process.env.SERVICE_HANDLE);
+  init = () => {
+    this.socket.emit("entities", process.env.SERVICE_HANDLE)
+    this.socket.emit("entities", process.env.SERVICE_HANDLE2)
+    this.socket.emit("entities", process.env.SERVICE_HANDLE3)
+  }   
 }
 
 const SocketService = new SystemSocket();
