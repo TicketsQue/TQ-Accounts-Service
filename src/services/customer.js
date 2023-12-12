@@ -54,6 +54,9 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp })
     }
     return signInResponse;
   } catch (err) {
+    if(err?.response?.data){
+      throw new Error(err?.response?.data)
+    }
     throw err;
   }
 };
@@ -123,18 +126,28 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
     if (!partner) {
       throw new Error("user does not exist");
     }
-
+    let updateBody = {status: true}
+    if(name){
+      updateBody.name = capitalize(name)
+    }
+    if(email){
+      updateBody.email = email
+    }
+    if(mobile){
+      updateBody.mobile = mobile
+    }
+    if(country_code){
+      updateBody.country_code = country_code
+    }
     const updateResponse = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/partners/${partner._id}`,
-      {
-        name: capitalize(name),
-        mobile: mobile,
-        country_code: country_code,
-        email: email,
-      }
+      updateBody
     );
     return updateResponse.data;
   } catch (err) {
+    if(err?.response?.data){
+      throw new Error(err?.response?.data)
+    }
     throw err;
   }
 };
