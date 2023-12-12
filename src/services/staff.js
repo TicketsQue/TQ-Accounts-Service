@@ -126,7 +126,7 @@ const addStaff = async (_req) => {
         }
       }
     }
-    _req.body.name = capitalize(_req.body.name)
+    _req.body.user.name = capitalize(_req.body.user.name)
     const response = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/partners/staff-onboard`,
       _req.body
