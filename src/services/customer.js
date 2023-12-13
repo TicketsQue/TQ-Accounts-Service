@@ -229,13 +229,21 @@ const getCustomerRole = async () => {
  */
 const createUser = async ({ name, email, mobile, country_code }) => {
   try {
+    let createBody = {}
+    if(name){
+      createBody.name = name
+    }
+    if(email){
+      createBody.email = email
+    }
+    if(mobile){
+      createBody.mobile = mobile
+    }
+    if(country_code){
+      createBody.country_code = country_code
+    }
     const customerRole = await getCustomerRole();
-    const partner = await createPartner({
-      name: name,
-      email: email,
-      country_code: country_code,
-      mobile: mobile,
-    });
+    const partner = await createPartner(createBody);
     const userData = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/users`,
       {
