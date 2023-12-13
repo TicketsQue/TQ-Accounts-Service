@@ -13,6 +13,9 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
     if (partner_info) {
       return await checkUser({ mobile: mobile });
     } else {
+      if(!name){
+        throw new Error("User not found")
+      }
       await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
       return await checkUser({ mobile: mobile });
     }

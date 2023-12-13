@@ -107,7 +107,6 @@ const getCustomerSuggesions = async (_req) => {
     
   }catch(err){
     if(err.response?.data){
-      console.log(err.response.data)
       throw new Error(err.response.data)
     }
     throw err
