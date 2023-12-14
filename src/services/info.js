@@ -233,6 +233,9 @@ const getTicketOrderInfo = async (_req) => {
           if(!pack_map_id){
             pack_map_id = packageJson[j]?.ticket_mapping_id
           }
+          if(!pack_map_id){
+            continue
+          }
           let packages = 
             await ticketParamMap.findById({_id:pack_map_id})
             .populate([
@@ -274,6 +277,7 @@ const getTicketOrderInfo = async (_req) => {
     }
     throw new Error("Ticket orders model error!")
   } catch(err){
+    console.log(err)
     throw err
   }
 }
