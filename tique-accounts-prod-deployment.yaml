@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: tique-accounts-container
-          image: ticketsque/accounts-prod:1.5
+          image: ticketsque/accounts-prod:2.0
           ports:
             - containerPort: 4121
       imagePullSecrets:
