@@ -11,11 +11,9 @@ const customerRouter = Router();
 
 const customerCreateHandler = async (_req, _res) => {
   try {
-    // console.log("create customer called")
     const response = await customerCreate(_req.body);
     _res.status(200).json(response);
   } catch (_e) {
-    console.log(_e);
     Utils.handleError(_e, _res);
   }
 };
@@ -25,7 +23,6 @@ const customerSignInHandler = async (_req, _res) => {
     const response = await customerSignInAndUpdate(_req.body);
     return _res.status(200).json(response);
   } catch (_e) {
-    console.log(_e);
     Utils.handleError(_e, _res);
   }
 };

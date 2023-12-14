@@ -1,4 +1,5 @@
 import axios from "axios";
+import { capitalize } from "../utils/strings.js";
 
 /**
  * A function to create new customer using the system service
@@ -12,6 +13,9 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
     if (partner_info) {
       return await checkUser({ mobile: mobile });
     } else {
+      if(!name){
+        throw new Error("User not found")
+      }
       await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
       return await checkUser({ mobile: mobile });
     }
@@ -53,6 +57,9 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp })
     }
     return signInResponse;
   } catch (err) {
+    if(err?.response?.data){
+      throw new Error(err?.response?.data)
+    }
     throw err;
   }
 };
@@ -122,18 +129,28 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
     if (!partner) {
       throw new Error("user does not exist");
     }
-
+    let updateBody = {status: true}
+    if(name){
+      updateBody.name = capitalize(name)
+    }
+    if(email){
+      updateBody.email = email
+    }
+    if(mobile){
+      updateBody.mobile = mobile
+    }
+    if(country_code){
+      updateBody.country_code = country_code
+    }
     const updateResponse = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/partners/${partner._id}`,
-      {
-        name: name,
-        mobile: mobile,
-        country_code: country_code,
-        email: email,
-      }
+      updateBody
     );
     return updateResponse.data;
   } catch (err) {
+    if(err?.response?.data){
+      throw new Error(err?.response?.data)
+    }
     throw err;
   }
 };
@@ -150,7 +167,7 @@ const createPartner = async ({ name, email, mobile, country_code}) => {
       `${process.env.SYSTEM_SERVER}/system/partners`,
       {
         //Objects passed to system service endpoint
-        name: name,
+        name: capitalize(name),
         email: email,
         mobile: mobile,
         country_code: country_code,
@@ -214,15 +231,22 @@ const getCustomerRole = async () => {
  * @returns {Object} returns the user created
  */
 const createUser = async ({ name, email, mobile, country_code }) => {
-  // console.log(code)
   try {
+    let createBody = {}
+    if(name){
+      createBody.name = name
+    }
+    if(email){
+      createBody.email = email
+    }
+    if(mobile){
+      createBody.mobile = mobile
+    }
+    if(country_code){
+      createBody.country_code = country_code
+    }
     const customerRole = await getCustomerRole();
-    const partner = await createPartner({
-      name: name,
-      email: email,
-      country_code: country_code,
-      mobile: mobile,
-    });
+    const partner = await createPartner(createBody);
     const userData = await axios.post(
       `${process.env.SYSTEM_SERVER}/system/users`,
       {
