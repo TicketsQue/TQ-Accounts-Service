@@ -28,7 +28,7 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
 };
 
 //handler method
-const customerSignInAndUpdate = async ({ name, email, user, country_code, otp }) => {
+const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, vendor_id }) => {
   try {
     const partnerInfo = await getPartner({ mobile: user });
     if (partnerInfo.length === 0) {
@@ -55,9 +55,16 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp })
         partner: partner,
       });
     }
+    await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor_id}/association`, {
+      params: {
+        customer: partner?._id,
+        associate: "YES"
+      }
+    })
     return signInResponse;
   } catch (err) {
     if(err?.response?.data){
+      console.log("System response")
       throw new Error(err?.response?.data)
     }
     throw err;
