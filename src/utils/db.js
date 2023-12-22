@@ -82,7 +82,6 @@ class DbManager {
             throw new Error(_e.message ? _e.message : "DB connection error");
         }
 
-        console.log("Connection estabilished succesfully to db : "+ _dbName);
         /* Store the connection details for later re use */
         this.connections[_dbName] = dbDetails;
 
