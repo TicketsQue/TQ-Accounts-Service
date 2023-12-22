@@ -172,7 +172,6 @@ const updateStaff = async (_req) => {
     })
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     _req.body.name = capitalize(_req.body.name)
-    console.log(_req.body.name)
     const response = await axios.put(
       `${process.env.SYSTEM_SERVER}/system/users/${_req.params.id}`,
       _req.body
@@ -188,7 +187,7 @@ const getStaff = async (_req) => {
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     const response = await axios.get(
       `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`,
-        { params: { search: _req.query.search || "", page: _req.query.page || 0 } }
+        { params: { search: _req.query.search || "", page: _req.query.page || 0, sort: _req.query.sort}}
     );
     const staffList = response.data
     const staffListUpdated = staffList.payload.map((staff) => {

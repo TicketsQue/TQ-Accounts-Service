@@ -159,6 +159,7 @@ const getTicketOrderInfo = async (_req) => {
     if(!user){
       throw new Error("Unauthorized request")
     }
+    const showSuccess = _req.query.success === "true"? true : false
     const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
     const eventModel = await EM.getModel("eventsDB", "events");
     const ticketParamMap = await EM.getModel("ticketsDB", "ticket_param_mapping");
@@ -172,26 +173,36 @@ const getTicketOrderInfo = async (_req) => {
       throw new Error("Access Denied")
     }
     if(ticketOrders){
-      const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
+      let findConfig = {
+        user_id: null,
+        vendor: {$ne:"656c73b0cb27bc8c6241e70c"}
+      }
+      if(showSuccess){
+        findConfig.payment_status = "PAYMENT_SUCCESS"
+      } else {
+        findConfig.payment_status = {$ne:"PAYMENT_SUCCESS"}
+      }
+      // old config
+      // const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
       let searchConfig = []
       if (search) {
+        searchConfig.push({ "customer_name": { $regex: new RegExp(search, "i") } })
         searchConfig.push({ "customer_mobile": { $regex: new RegExp(search, "i") } })
-        searchConfig.push({ "customer_name": { $regex: new RegExp(search, "i") }  })
+        searchConfig.push({ "ticket_tracking_id": { $regex: new RegExp(search, "i") } })
       }
-
+      if(vendor){
+        if(currentUser.role.handle === "system"){
+          findConfig.vendor = _req.body.vendor
+        } else {
+          findConfig.vendor = currentUser?.vendor?._id
+        }
+      }
       let query = { ...findConfig };
 
       if (searchConfig.length > 0) {
         query = {
           $and: [findConfig, { $or: searchConfig }],
         };
-      }
-      if(vendor){
-        if(currentUser.role.handle === "system"){
-          findConfig.vendor = vendor
-        } else {
-          findConfig.vendor = currentUser?.vendor?._id
-        }
       }
       const _count = await ticketOrders.countDocuments(query)
       const ordersData = await ticketOrders.find(query)

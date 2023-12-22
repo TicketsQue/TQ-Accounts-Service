@@ -36,9 +36,6 @@ class EntityManager {
   };
 
   createModel = async (_dbName, _collectionName, _fields) => {
-    console.log(
-      "createModel called for : " + _collectionName + ", on DB : " + _dbName
-    );
 
     if (!DBM.connections[_dbName]) {
       throw new Error("No connection found for DB : " + _dbName);
@@ -193,8 +190,6 @@ class EntityManager {
     // Store the model in the cache
     DBM.setModel(_dbName, _collectionName, entityModel);
 
-    console.log("Return Model : " + _collectionName);
-
     return entityModel;
   };
 
@@ -215,27 +210,14 @@ class EntityManager {
   };
 
   getEntityHandle = async (_dbName, _id, _collectionName) => {
-    console.log("getEntityHandle called  ");
-    console.log(
-      "_dbName : " +
-        _dbName +
-        ", _id : " +
-        _id +
-        ", _collectionName : " +
-        _collectionName
-    );
-
     const eCahceList = cache.getAll();
     if (eCahceList) {
       const keys = Object.keys(eCahceList);
       for (let i = 0; i < keys.length; i++) {
         if (eCahceList[keys[i]].id == _id) {
-          console.log(keys[i] + " !== " + _collectionName);
           if (keys[i] !== _collectionName) {
-            console.log("Ok, not equal so good to go");
             /* Also check if the model exist */
             if (!this.datasource.models[keys[i]]) {
-              console.log("Also not found on models, so about to create");
               await this.createModel(
                 _dbName,
                 keys[i],
