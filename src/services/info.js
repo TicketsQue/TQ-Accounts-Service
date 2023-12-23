@@ -169,6 +169,7 @@ const getTicketOrderInfo = async (_req) => {
     const limit = parseInt(process.env.PAGE_SIZE);
     const currentUser = await getUserInfo({_id: user})
     const vendor = _req.query.vendor ? true : false
+    // const vendor_id = _req.query.vendor_id
     if(!(currentUser.role.handle === "sub-admin" || currentUser.role.handle === "admin" || currentUser.role.handle === "system" )){
       throw new Error("Access Denied")
     }
@@ -182,6 +183,9 @@ const getTicketOrderInfo = async (_req) => {
       } else {
         findConfig.payment_status = {$ne:"PAYMENT_SUCCESS"}
       }
+      // if(vendor_id){
+      //   findConfig.vendor = vendor_id
+      // }
       // old config
       // const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
       let searchConfig = []
@@ -192,7 +196,7 @@ const getTicketOrderInfo = async (_req) => {
       }
       if(vendor){
         if(currentUser.role.handle === "system"){
-          findConfig.vendor = _req.body.vendor
+          findConfig.vendor = _req.query.vendor
         } else {
           findConfig.vendor = currentUser?.vendor?._id
         }
@@ -225,6 +229,11 @@ const getTicketOrderInfo = async (_req) => {
               console.log(err)
             }
           }
+        }
+        let ticket_data = {}
+        if(ordersData?.tickset_status){
+          ticket_data.ticket_id = ordersData?.ticket_tracking_id
+          ticket_data.qr_token = ordersData?.qr_token
         }
         temp.customer_data = customer_data
         let event_data = await eventModel.findOne({_id: ordersData[i].association}).lean()
