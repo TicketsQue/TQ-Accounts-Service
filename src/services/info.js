@@ -282,6 +282,7 @@ const getTicketOrderInfo = async (_req) => {
         temp.package_data = package_data
         temp._id = ordersData[i]._id.toString()
         temp.createdAt = ordersData[i].createdAt
+        temp.ticket_data = ticket_data
 
         payload.push(temp)
       }
