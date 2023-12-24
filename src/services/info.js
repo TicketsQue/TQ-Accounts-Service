@@ -164,9 +164,10 @@ const getTicketOrderInfo = async (_req) => {
     const eventModel = await EM.getModel("eventsDB", "events");
     const ticketParamMap = await EM.getModel("ticketsDB", "ticket_param_mapping");
     const search = _req.query.search ? _req.query.search : null;
+    const pageSize = parseInt(_req.query.page_size) || parseInt(process.env.PAGE_SIZE)
     const page = parseInt(_req.query.page) || 0;
-    const skip = page * parseInt(process.env.PAGE_SIZE);
-    const limit = parseInt(process.env.PAGE_SIZE);
+    const skip = page * pageSize;
+    const limit = pageSize;
     const currentUser = await getUserInfo({_id: user})
     const vendor = _req.query.vendor ? true : false
     // const vendor_id = _req.query.vendor_id
@@ -289,8 +290,8 @@ const getTicketOrderInfo = async (_req) => {
 
       return {
         total_records: _count,
-        totalPages: Math.ceil(_count / process.env.PAGE_SIZE),
-        recordPerPage: parseInt(process.env.PAGE_SIZE),
+        totalPages: Math.ceil(_count / pageSize),
+        recordPerPage: pageSize,
         currentPage: page,
         _payload: payload
       };
