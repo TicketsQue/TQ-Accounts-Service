@@ -47,7 +47,7 @@ const getUserInfo = async ({ _id }) => {
     delete userData.last_access;
     return userData;
   } catch (err) {
-    if(err.response?.data){
+    if (err.response?.data) {
       throw new Error(err.response?.data)
     }
     throw err;
@@ -58,16 +58,16 @@ const createVendorCustomer = async (_req) => {
   try {
     const { mobile, email, name, country_code, partner_info } = _req.body;
     if (partner_info) {
-      const updatedPartnerData = await updateCustomer({name: name, mobile: mobile, email: email,country_code:country_code, partner: partner_info})
+      const updatedPartnerData = await updateCustomer({ name: name, mobile: mobile, email: email, country_code: country_code, partner: partner_info })
       return updatedPartnerData;
     }
     const customerCreateRes = await createUser({ name, email, mobile, country_code });
     return customerCreateRes;
   } catch (err) {
-    if(err.response?.data?.startsWith("Partner validation failed")){
+    if (err.response?.data?.startsWith("Partner validation failed")) {
       throw new Error("Invalid request, fields missmatch")
     }
-    if(err.response?.data){
+    if (err.response?.data) {
       throw new Error(err.response.data)
     }
     throw err;
@@ -75,38 +75,38 @@ const createVendorCustomer = async (_req) => {
 };
 
 const getCustomerSuggesions = async (_req) => {
-  try{
+  try {
     const { user } = _req.headers
-    const mobile  = _req.query.mobile || null
-    if(!user){
+    const mobile = _req.query.mobile || null
+    if (!user) {
       throw new Error("Invalid request")
     }
-    const userData = await getUserInfo({_id: user})
+    const userData = await getUserInfo({ _id: user })
     const vendor = userData?.vendor?._id
     const vendorCustomersList = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor}/customers`,
       {
         params: _req.query,
       }
     )
-    if(!mobile){
+    if (!mobile) {
       return vendorCustomersList.data
     }
     //filter according to mobile number
     const customerData = vendorCustomersList.data.allCustomers.find(data => data.customer?.mobile === mobile)
-    if(!customerData){
+    if (!customerData) {
       throw new Error("Customer not found")
     }
     const customer = customerData.customer
     return {
-      payload:{
+      payload: {
         name: customer.name,
         mobile: customer.mobile,
         email: customer.email
       }
     }
-    
-  }catch(err){
-    if(err.response?.data){
+
+  } catch (err) {
+    if (err.response?.data) {
       throw new Error(err.response.data)
     }
     throw err
@@ -114,29 +114,29 @@ const getCustomerSuggesions = async (_req) => {
 }
 
 const updatePartnerProfile = async (_req) => {
-  try{
+  try {
     const userProfileImg = _req.files['profile_img']
     const user = _req.headers.user
     const name = capitalize(_req.body.name)
     const mobile = _req.body.mobile
     const email = _req.body.email
     const countryCode = _req.body.country_code
-    if(!(user)){
+    if (!(user)) {
       throw new Error(`Invalid request`)
     }
     const updateData = {}
-    if(name){
+    if (name) {
       updateData.name = name
     }
-    if(email){
+    if (email) {
       updateData.email = email
     }
-    if(countryCode){
+    if (countryCode) {
       updateData.country_code = countryCode
     }
-    const userDate = await getUserInfo({_id: user})
-    if(userProfileImg && userProfileImg?.length === 1){
-      const imgData = await uploadToS3({file: userProfileImg[0], vendorID: userDate?.vendor?._id, userID: user, })
+    const userDate = await getUserInfo({ _id: user })
+    if (userProfileImg && userProfileImg?.length === 1) {
+      const imgData = await uploadToS3({ file: userProfileImg[0], vendorID: userDate?.vendor?._id, userID: user, })
       updateData.profile_img = imgData.object_key
     }
     const updateResponse = await axios.put(
@@ -144,8 +144,8 @@ const updatePartnerProfile = async (_req) => {
       updateData
     );
     return updateResponse.data
-  } catch(err){
-    if(err.response?.data){
+  } catch (err) {
+    if (err.response?.data) {
       throw new Error(err.response?.data)
     }
     throw err
@@ -154,12 +154,12 @@ const updatePartnerProfile = async (_req) => {
 
 //ticket orders info
 const getTicketOrderInfo = async (_req) => {
-  try{
+  try {
     const user = _req.headers.user
-    if(!user){
+    if (!user) {
       throw new Error("Unauthorized request")
     }
-    const showSuccess = _req.query.success === "true"? true : false
+    const showSuccess = _req.query.success === "true" ? true : false
     const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
     const eventModel = await EM.getModel("eventsDB", "events");
     const ticketParamMap = await EM.getModel("ticketsDB", "ticket_param_mapping");
@@ -167,31 +167,35 @@ const getTicketOrderInfo = async (_req) => {
     const page = parseInt(_req.query.page) || 0;
     const skip = page * parseInt(process.env.PAGE_SIZE);
     const limit = parseInt(process.env.PAGE_SIZE);
-    const currentUser = await getUserInfo({_id: user})
+    const currentUser = await getUserInfo({ _id: user })
     const vendor = _req.query.vendor ? true : false
-    if(!(currentUser.role.handle === "sub-admin" || currentUser.role.handle === "admin" || currentUser.role.handle === "system" )){
+    if (!(currentUser.role.handle === "sub-admin" || currentUser.role.handle === "admin" || currentUser.role.handle === "system")) {
       throw new Error("Access Denied")
     }
-    if(ticketOrders){
+    const successTicketOrders = await ticketOrders.find({ user_id: null, payment_status: "PAYMENT_SUCCESS" })
+    const successMobileNumbers = successTicketOrders.map(order => order.customer_mobile)
+    const testersMobileNumbers = ["7899020430", "8147113798", "8861278272", "8088020619", "9740452978", "7204357841", "9353478074", "9741536152", "9972538979", "7483626790", "9964533375", "8970063505"]
+    if (ticketOrders) {
       let findConfig = {
         user_id: null,
-        vendor: {$ne:"656c73b0cb27bc8c6241e70c"}
+        vendor: { $ne: "656c73b0cb27bc8c6241e70c" },
+        customer_mobile: { $nin: Array.from(new Set(successMobileNumbers.concat(testersMobileNumbers))) }
       }
-      if(showSuccess){
+      if (showSuccess) {
         findConfig.payment_status = "PAYMENT_SUCCESS"
-      } else {
-        findConfig.payment_status = {$ne:"PAYMENT_SUCCESS"}
+        findConfig.customer_mobile = { $nin: Array.from(new Set(testersMobileNumbers)) }
       }
-      // old config
-      // const findConfig = {user_id: null, payment_status:{$ne:"PAYMENT_SUCCESS"}, vendor: {$ne:"656c73b0cb27bc8c6241e70c"}}
+      else {
+        findConfig.payment_status = { $ne: "PAYMENT_SUCCESS" }
+      }
       let searchConfig = []
       if (search) {
         searchConfig.push({ "customer_name": { $regex: new RegExp(search, "i") } })
         searchConfig.push({ "customer_mobile": { $regex: new RegExp(search, "i") } })
         searchConfig.push({ "ticket_tracking_id": { $regex: new RegExp(search, "i") } })
       }
-      if(vendor){
-        if(currentUser.role.handle === "system"){
+      if (vendor) {
+        if (currentUser.role.handle === "system") {
           findConfig.vendor = _req.body.vendor
         } else {
           findConfig.vendor = currentUser?.vendor?._id
@@ -206,20 +210,20 @@ const getTicketOrderInfo = async (_req) => {
       }
       const _count = await ticketOrders.countDocuments(query)
       const ordersData = await ticketOrders.find(query)
-      .sort({createdAt:-1})
-      .skip(skip)
-      .limit(limit)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
 
       let payload = []
-      for(let i=0;i<ordersData?.length;i++){
+      for (let i = 0; i < ordersData?.length; i++) {
         let temp = {}
-        let customer_data = await getPartnerByPartnerId({id: ordersData[i].customer_id})
-        if(!customer_data){
-          try{
-            customer_data = (await getUserInfo({ _id: ordersData[i].customer_id})).partner
+        let customer_data = await getPartnerByPartnerId({ id: ordersData[i].customer_id })
+        if (!customer_data) {
+          try {
+            customer_data = (await getUserInfo({ _id: ordersData[i].customer_id })).partner
           }
-           catch(err){
-            if(err?.message === "User not found"){
+          catch (err) {
+            if (err?.message === "User not found") {
               customer_data = null
             } else {
               console.log(err)
@@ -227,48 +231,48 @@ const getTicketOrderInfo = async (_req) => {
           }
         }
         temp.customer_data = customer_data
-        let event_data = await eventModel.findOne({_id: ordersData[i].association}).lean()
+        let event_data = await eventModel.findOne({ _id: ordersData[i].association }).lean()
         temp.event_data = event_data
-        let vendor_data = await getPartnerByPartnerId({id: ordersData[i].vendor})
+        let vendor_data = await getPartnerByPartnerId({ id: ordersData[i].vendor })
         temp.vendor_data = vendor_data
         let payment_data = {}
         payment_data.total_price = ordersData[i]?.total_price
-        payment_data.platform_fee = ordersData[i]?.platform_fee 
+        payment_data.platform_fee = ordersData[i]?.platform_fee
         payment_data.gst_fee = ordersData[i]?.gst_fee
         payment_data.payment_status = ordersData[i]?.payment_status
         temp.payment_data = payment_data
         const packageJson = ordersData[i].packages.map(pack => JSON.parse(pack))
         let package_data = []
-        for(let j=0;j<packageJson?.length; j++){
+        for (let j = 0; j < packageJson?.length; j++) {
           let pack_map_id = packageJson[j]?.ticket_pack_map_id
-          if(!pack_map_id){
+          if (!pack_map_id) {
             pack_map_id = packageJson[j]?.ticket_mapping_id
           }
-          if(!pack_map_id){
+          if (!pack_map_id) {
             continue
           }
-          let packages = 
-            await ticketParamMap.findById({_id:pack_map_id})
-            .populate([
-              {
-                path: "ticket_param",
-                model: "ticket_params",
-              },
-              {
-                path: "package_map",
-                model: "package_map",
-                populate: [
-                  {
-                    path: "package",
-                    model: "packages",
-                  },
-                  { path: "param", model: "package_params" },
-                ],
-              },
-            ])
-            .lean()
+          let packages =
+            await ticketParamMap.findById({ _id: pack_map_id })
+              .populate([
+                {
+                  path: "ticket_param",
+                  model: "ticket_params",
+                },
+                {
+                  path: "package_map",
+                  model: "package_map",
+                  populate: [
+                    {
+                      path: "package",
+                      model: "packages",
+                    },
+                    { path: "param", model: "package_params" },
+                  ],
+                },
+              ])
+              .lean()
           // let quantity = {quantity: packageJson[j].qty}
-          package_data.push({packages, quantity: packageJson[j].qty });
+          package_data.push({ packages, quantity: packageJson[j].qty });
         }
         temp.package_data = package_data
         temp._id = ordersData[i]._id.toString()
@@ -287,7 +291,7 @@ const getTicketOrderInfo = async (_req) => {
 
     }
     throw new Error("Ticket orders model error!")
-  } catch(err){
+  } catch (err) {
     console.log(err)
     throw err
   }
@@ -298,7 +302,7 @@ const getPartnerByPartnerId = async ({ id }) => {
   try {
     return (await Utils.contactSystem("get", "/system/partners/" + id)).data
   } catch (err) {
-    if(err?.response?.data){
+    if (err?.response?.data) {
       throw new Error(err.response.data)
     }
     throw err;
