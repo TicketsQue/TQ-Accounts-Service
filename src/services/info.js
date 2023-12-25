@@ -173,6 +173,28 @@ const getTicketOrderInfo = async (_req) => {
       throw new Error("Access Denied")
     }
     const successTicketOrders = await ticketOrders.find({ user_id: null, payment_status: "PAYMENT_SUCCESS" })
+    let vendorTicketData = {}
+    for(let i=0;i<successTicketOrders?.length;i++){
+      const vendorName = await getVendorByVendorId({vendorId: successTicketOrders[i]?.vendor})
+      console.log(vendorTicketData[vendorName?._id])
+      if(!vendorTicketData[vendorName?._id]){
+        vendorTicketData[vendorName?._id] = {
+          vendor_name: vendorName?.name,
+          ticket_price: Number(successTicketOrders[i]?.total_price),
+          platform_fee: Number(successTicketOrders[i]?.platform_fee),
+          gst_fee: Number(successTicketOrders[i]?.gst_fee),
+          total: Number(successTicketOrders[i]?.total_price) + Number(successTicketOrders[i]?.platform_fee) + Number(successTicketOrders[i]?.gst_fee)
+        }
+      } else {
+        vendorTicketData[vendorName?._id] = {
+          vendor_name: vendorName?.name,
+          ticket_price: vendorTicketData[vendorName?._id]["ticket_price"] += Number(successTicketOrders[i]?.total_price),
+          platform_fee: vendorTicketData[vendorName?._id]["platform_fee"] +=  Number(successTicketOrders[i]?.platform_fee),
+          gst_fee: vendorTicketData[vendorName?._id]["gst_fee"] +=  Number(successTicketOrders[i]?.gst_fee),
+          total: vendorTicketData[vendorName?._id]["gst_fee"] += (Number(successTicketOrders[i]?.total_price) + Number(successTicketOrders[i]?.platform_fee) + Number(successTicketOrders[i]?.gst_fee))
+        }
+      }
+    }
     const successMobileNumbers = successTicketOrders.map(order => order.customer_mobile)
     const testersMobileNumbers = ["7899020430", "8147113798", "8861278272", "8088020619", "9740452978", "7204357841", "9353478074", "9741536152", "9972538979", "7483626790", "9964533375", "8970063505"]
     if (ticketOrders) {
@@ -286,7 +308,7 @@ const getTicketOrderInfo = async (_req) => {
         totalPages: Math.ceil(_count / process.env.PAGE_SIZE),
         recordPerPage: parseInt(process.env.PAGE_SIZE),
         currentPage: page,
-        _payload: payload
+        _payload: {payload, vendor_ticket_totals: vendorTicketData}
       };
 
     }
@@ -308,5 +330,17 @@ const getPartnerByPartnerId = async ({ id }) => {
     throw err;
   }
 };
+
+const getVendorByVendorId = async ({ vendorId }) => {
+  try {
+    const vendorData = await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendorId}`)
+    if(vendorData?.data?.payload?.length === 0){
+      throw new Error("Invalid vendor")
+    }
+    return vendorData.data
+  } catch (err) {
+    throw err
+  }
+}
 
 export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions, getTicketOrderInfo };
