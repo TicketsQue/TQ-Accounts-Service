@@ -9,6 +9,8 @@ import {
   getCustomerSuggesions,
   getTicketOrderInfo,
   getAllTickets,
+  getTicketCounts,
+  getAllCustomerData,
 } from "../services/info.js";
 import { validateCustomerRole } from "../middleware/customer-login-validation.js";
 import errorResponse from "../utils/response.js";
@@ -69,6 +71,18 @@ const updatePartnerHandler = async (_req, _res) => {
     return errorResponse(_e, 500, _res)
   }
 }
+const getTicketCountsHandler = async (_req, _res) => {
+  try{
+    _res.status(200).json(await getTicketCounts(_req))
+  } catch(_e){
+    if(_e.message.toLowerCase().startsWith("access denied")){
+      return errorResponse(_e, 403, _res)
+    }
+    console.log("unhandled server on get all tickets")
+    console.log(_e)
+    return errorResponse(new Error("some thing went wrong"), 500, _res)
+  }
+}
 
 const getAllTicketsHandler = async(_req, _res) => {
   try{
@@ -81,7 +95,7 @@ const getAllTicketsHandler = async(_req, _res) => {
       return errorResponse(_e, 404, _res)
     }
     if(_e.message.toLowerCase().endsWith("access denied")){
-      return errorResponse(_e, 404, _res)
+      return errorResponse(_e, 403, _res)
     }
     console.log("unhandled server on get all tickets")
     console.log(_e)
@@ -100,6 +114,25 @@ const getCustomerSuggesionHandler = async(_req, _res) => {
       return errorResponse(_e, 404, _res)
     }
     return errorResponse(_e, 500, _res)
+  }
+}
+
+const getAllCustomerDataHander = async (_req, _res) => {
+  try{
+    _res.status(200).json(await getAllCustomerData(_req))
+  } catch(_e){
+    if(_e.message.toLowerCase().startsWith("invalid request")){
+      return errorResponse(_e, 400, _res)
+    }
+    if(_e.message.toLowerCase().endsWith("not found")){
+      return errorResponse(_e, 404, _res)
+    }
+    if(_e.message.toLowerCase().endsWith("access denied")){
+      return errorResponse(_e, 403, _res)
+    }
+    console.log("unhandled server on get all tickets")
+    console.log(_e)
+    return errorResponse(new Error("some thing went wrong"), 500, _res)
   }
 }
 
@@ -131,5 +164,9 @@ infoRouter.put("/info/user",multer.fields([{name: "profile_img" ,maxCount:1}]) ,
 infoRouter.get("/info/tickets/orders", getTicketsPaymentInfoHandler)
 
 infoRouter.get("/info/tickets/list", getAllTicketsHandler)
+
+infoRouter.get("/info/tickets/count", getTicketCountsHandler)
+
+infoRouter.get("/info/customers/all", getAllCustomerDataHander)
 
 export default infoRouter;

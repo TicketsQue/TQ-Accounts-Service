@@ -57,11 +57,21 @@ const getUserInfo = async ({ _id }) => {
 const createVendorCustomer = async (_req) => {
   try {
     const { mobile, email, name, country_code, partner_info } = _req.body;
+    const user = _req.headers.user
+    let vendor_id = _req.headers.vendor    
     if (partner_info) {
       const updatedPartnerData = await updateCustomer({ name: name, mobile: mobile, email: email, country_code: country_code, partner: partner_info })
       return updatedPartnerData;
     }
     const customerCreateRes = await createUser({ name, email, mobile, country_code });
+    if(vendor_id){
+      await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor_id}/association`, {
+        params: {
+          customer: customerCreateRes?._id,
+          associate: "YES"
+        }
+      })
+    }
     return customerCreateRes;
   } catch (err) {
     if (err.response?.data?.startsWith("Partner validation failed")) {
@@ -334,9 +344,21 @@ const getAllTickets = async (_req) => {
     const { from_date, till_date, purchase_mode, from_price, till_price, from_ppl_count, till_ppl_count, vendor, ticket_status } = _req.query
     // sort fields and order
     const sortQueryParam = _req.query.sort;
-
+    const testersMobileNumbers = ["7899020430", "8147113798", "8861278272", "8088020619", "9740452978", "9972538979", "7204357841", "9353478074", "9741536152", "7483626790", "9964533375", "8970063505"]
     const findConfig = {
-      $or: [{ ticket_status: true }, { $and: [{ payment_status: "true" }, { ticket_status: false }] }],
+      $or: [{ ticket_status: true }, {
+        $and: [
+          {
+            $or: [
+              { payment_status: "true" },
+              { payment_status: "PAYMENT_SUCCESS" }
+            ]
+          },
+          { ticket_status: false }
+        ]
+      }],
+      customer_mobile: { $nin: Array.from(new Set(testersMobileNumbers)) },
+      vendor: { $ne: "656c73b0cb27bc8c6241e70c" },
     }
     let searchConfig = []
     if (search) {
@@ -385,9 +407,9 @@ const getAllTickets = async (_req) => {
       }
     }
     // vendor and ticket status filtering
-    if(vendor){
+    if (vendor) {
       let vendorList = vendor?.split(",")
-      if ( vendorList?.length > 0) {
+      if (vendorList?.length > 0) {
         query.vendor = { $in: vendorList }
       }
     }
@@ -401,7 +423,70 @@ const getAllTickets = async (_req) => {
     if (ticket_status) {
       query.ticket_status = { $eq: ticket_status === "true" ? true : false }
     }
-    let _count = await ticketOrders.countDocuments(query)
+    let vendorTicketCounts = {}
+    let ticketOrdersCount = await ticketOrders.find(query)
+    .sort(sortConfig || defaultSortConfig).populate({
+      path: 'tickets',
+      populate: {
+        path: 'ticket_param_mapping',
+        populate: [
+          {
+            path: "ticket_param",
+            model: "ticket_params",
+          },
+          {
+            path: "package_map",
+            model: "package_map",
+            populate: [
+              {
+                path: "package",
+                model: "packages",
+              },
+              { path: "param", model: "package_params" },
+            ],
+          },
+        ],
+      },
+    })
+    for(let i=0;i<ticketOrdersCount?.length;i++){
+      // calculate vendor ticket counts
+      if(!vendorTicketCounts[ticketOrdersCount[i].vendor]){
+        vendorTicketCounts[ticketOrdersCount[i].vendor] = {"total_ticket_sales":ticketOrdersCount[i].total_price, "total_platform_fee":ticketOrdersCount[i].platform_fee, "total_gst_fee":ticketOrdersCount[i].gst_fee, "online_tickets_count":ticketOrdersCount[i]?.user_id ? 0 : 1, "offline_tickets_count":ticketOrdersCount[i]?.user_id ? 1 : 0, "offline_head_count": 0, "online_head_count": 0} 
+      } else {
+        vendorTicketCounts[ticketOrdersCount[i].vendor]["total_ticket_sales"] += ticketOrdersCount[i].total_price
+        vendorTicketCounts[ticketOrdersCount[i].vendor]["total_platform_fee"] += Math.floor(ticketOrdersCount[i].platform_fee)
+        vendorTicketCounts[ticketOrdersCount[i].vendor]["total_gst_fee"] += Math.floor(ticketOrdersCount[i].gst_fee)
+        if(ticketOrdersCount[i]?.user_id !== null){
+          vendorTicketCounts[ticketOrdersCount[i].vendor]["offline_tickets_count"] += 1
+        } else {
+          vendorTicketCounts[ticketOrdersCount[i].vendor]["online_tickets_count"] += 1
+        }
+      }
+      const ticketFilteredData = ticketOrdersCount[i].tickets.forEach((ticket) => {
+        const packageParsedData = JSON.parse(ticket.package_data)
+        let purchase_mode = ticketOrdersCount[i].user_id ? "offline_head_count" : "online_head_count";
+        if (ticketOrdersCount[i].ticket_status) {
+          const packageName = ticketOrdersCount[i].vendor;
+          const packageCount = vendorTicketCounts[packageName];
+
+          // console.log(packageParsedData)
+          const quantityToAdd = parseInt(ticket.quantity) * parseInt(packageParsedData?.package_map?.package?.pax)
+
+          if (!packageCount) {
+            // If the package name doesn't exist in vendorTicketCounts, create it.
+            vendorTicketCounts[packageName] = { [purchase_mode]: quantityToAdd || 0};
+          } else if (!packageCount[purchase_mode]) {
+            // If the purchase_mode doesn't exist for the package, create it.
+            packageCount[purchase_mode] = quantityToAdd;
+          } else {
+            // If both package name and purchase_mode exist, increment the value.
+            packageCount[purchase_mode] += quantityToAdd;
+          }
+        }
+      })
+        
+    }
+    let _count = ticketOrdersCount?.length
     const ticketData = await ticketOrders.find(query)
       .sort(sortConfig || defaultSortConfig).populate({
         path: 'tickets',
@@ -450,23 +535,28 @@ const getAllTickets = async (_req) => {
           canceled_at: canelation?.createdAt
         }
       }
-
+      
       const customerData = await getPartnerByPartnerId({ id: ticketData[i].customer_id })
       const vendorShortName = await getVendorShortName({ vendorId: eventData.vendor })
+      const vendorData = await getPartnerByPartnerId({id: ticketData[i].vendor})
       const ticketFilteredData = ticketData[i].tickets.map((ticket) => {
+        const packageParsedData = JSON.parse(ticket.package_data)
         return {
           ticket_id: ticket._id,
           quantity: ticket.quantity,
           scan_count: ticket.scan_count,
           balance: ticket.balance,
           status: ticket.status,
-          package_data: JSON.parse(ticket.package_data)
+          package_data: packageParsedData
         }
       })
       const filteredData = {
         ticket_token: ticketData[i].qr_token,
         event_tracking_id: eventData.tracking_id,
+        vendor_name: vendorData?.name,
         vendor_short_name: vendorShortName,
+        event_name: eventData?.name,
+        status: ticketData[i].ticket_status,
         customer_email: customerData?.email,
         customer_id: ticketData[i].customer_id,
         customer_mobile: ticketData[i].customer_mobile,
@@ -483,7 +573,8 @@ const getAllTickets = async (_req) => {
         purchase_mode: ticketData[i].user_id ? "Offline" : "Online",
         tickets_data: ticketFilteredData,
         user_data: issuerData,
-        canelation_data: canelation_data
+        canelation_data: canelation_data,
+        // vendor_tickets_data: vendorTicketCounts
       }
       if (purchase_mode && (filteredData.purchase_mode.toLocaleLowerCase() !== purchase_mode.toLocaleLowerCase())) {
         _count -= 1
@@ -496,9 +587,193 @@ const getAllTickets = async (_req) => {
       totalPages: Math.ceil(_count / pageSize),
       recordPerPage: pageSize,
       currentPage: page,
-      _payload: finalFilter
+      _payload: finalFilter,
+      vendor_counts: vendorTicketCounts
     };
   } catch (err) {
+    throw err
+  }
+}
+
+//super admin endpoint to get users who are mapped but no ticket orders created.
+// get all customers who are mapped with vendors but have not created ticket order
+// get all customers who are present in partner table but are not mapped with any vendor
+// NOTE: exclude testing mobile numbers and 
+/* Complicated to as  vendorcustomer and partner endpoints are in system DB*/
+/**
+ * steps
+ * call system to fetch all vendor customer and partners
+ * get all ticket orders and apply checks and send response
+ */
+// const getCustomerInfo = async(_req) => {
+
+// }
+
+// super admin dashboard data
+const getTicketCounts = async (_req) => {
+  try {
+    const user = _req.headers.user
+    const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
+    if (!user) {
+      throw new Error("Access denied user not found")
+    }
+    const currentUser = await getUserInfo({ _id: user })
+    if (!currentUser || currentUser.role.handle !== "system") {
+      throw new Error("Access denied, only system users can access this API")
+    }
+    const testersMobileNumbers = ["7899020430", "8147113798", "8861278272", "8088020619", "9740452978", "7204357841", "9353478074", "9741536152", "9972538979", "7483626790", "9964533375", "8970063505"]
+    const allTicketOrders = await ticketOrders.find({
+    ticket_status: true, 
+    customer_mobile: { $nin: Array.from(new Set(testersMobileNumbers))},
+    vendor: { $ne: "656c73b0cb27bc8c6241e70c" }
+   }).populate({
+      path: 'tickets',
+      populate: {
+        path: 'ticket_param_mapping',
+        populate: [
+          {
+            path: "ticket_param",
+            model: "ticket_params",
+          },
+          {
+            path: "package_map",
+            model: "package_map",
+            populate: [
+              {
+                path: "package",
+                model: "packages",
+              },
+              { path: "param", model: "package_params" },
+            ],
+          },
+        ],
+      },
+    })
+
+    let payload = {
+      ticket_sales_online: 0,
+      ticket_sales_offline: 0,
+      platform_fee_total: 0,
+      gst_fee_total: 0,
+      total_online_headcount: 0,
+      total_offline_headcount: 0,
+      total_online_ticket_count: 0,
+      total_offline_ticket_count: 0,
+      total_tickets_count: allTicketOrders?.length
+    }
+
+    allTicketOrders?.forEach(ticketOrder => {
+      // general data that doesn concern about online or offline
+      payload.platform_fee_total += Math.floor(ticketOrder?.platform_fee)
+      payload.gst_fee_total += Math.floor(ticketOrder?.gst_fee)
+      if(ticketOrder?.user_id !== null){
+        payload.total_offline_ticket_count += 1
+        payload.ticket_sales_offline += parseInt(ticketOrder?.total_price)
+      } else {
+        payload.total_online_ticket_count += 1
+        payload.ticket_sales_online += parseInt(ticketOrder?.total_price)
+      }
+      const ticketFilteredData = ticketOrder.tickets.map((ticket) => {
+        const packageParsedData = JSON.parse(ticket.package_data)
+        if (ticketOrder?.user_id !== null) {
+          // offline tickets
+          payload.total_offline_headcount += parseInt(ticket.quantity) * parseInt(packageParsedData?.package_map?.package?.pax)
+        } else {
+          // online tickets
+          payload.total_online_headcount += parseInt(ticket.quantity) * parseInt(packageParsedData?.package_map?.package?.pax)
+        }
+      })
+
+
+    })
+    return payload
+
+  } catch (err) {
+    throw err
+  }
+}
+
+const getAllCustomerData = async (_req) => {
+  try{
+    const pageSize = parseInt(_req.query.page_size) || parseInt(process.env.PAGE_SIZE)
+    const page = parseInt(_req.query.page) || 0;
+    let totalRecords = 0
+    let totalPages
+    let recordPerPage
+    let currentPage
+    const user = _req.headers.user
+    const checkVendorMapping = _req.query.check_mapping === "true"?true:false
+    const checkCustomerOrders = _req.query.check_order === "true"?true:false
+    const eventModel = await EM.getModel("eventsDB", "events");
+    const ticketOrders = await EM.getModel("ticketsDB", "ticket_orders")
+    if (!user) {
+      throw new Error("Access denied user not found")
+    }
+    const currentUser = await getUserInfo({ _id: user })
+    if (!currentUser || currentUser.role.handle !== "system") {
+      throw new Error("Access denied, only system users can access this API")
+    }
+    let payload = []
+    
+    // load all partners, base the pagination on partner table
+    const partners_response = await Utils.contactSystem("get", `/system/partners?type=Customer&page=${page}&page_size=${pageSize}` )
+    const partners = partners_response?.data?.payload
+     totalRecords = partners_response?.data?.totalRecords
+     totalPages = partners_response?.data?.totalPages
+     recordPerPage = partners_response?.data?.recordPerPage
+     currentPage = partners_response?.data?.currentPage
+    // load all partner customer mapping
+    const partnerCustomerMapping = await Utils.contactSystem("get", `/system/partners/customer/list`)
+    const allPartnerCustomerMapping = partnerCustomerMapping?.data
+    //loop through each partner and find if mapping is there and find if ticket order is there
+    for(let i=0;i<partners?.length; i++){
+      let temp = {}
+      temp["customer_data"] = partners[i]
+      // find if partner has partner mapping
+      const mappedPartner =  allPartnerCustomerMapping.find(partnerCustMap => partnerCustMap?.customer?._id === partners[i]._id)
+      const customerTicketOrders = await ticketOrders.find({customer_id: partners[i]?._id})
+      // check partner mapping
+      if(checkVendorMapping && !checkCustomerOrders){
+        if(mappedPartner && customerTicketOrders?.length===0){
+          temp["customer_mapped_partner"] = mappedPartner?.partner || null
+          temp["customer_ticket_orders"] = customerTicketOrders?.length
+          payload.push(temp)
+          continue
+        }
+      }
+      if(!checkVendorMapping && checkCustomerOrders){
+        if(!mappedPartner && customerTicketOrders?.length > 0){
+          temp["customer_mapped_partner"] = mappedPartner?.partner || null
+          temp["customer_ticket_orders"] = customerTicketOrders?.length
+          payload.push(temp)
+        }
+      }
+      if(checkVendorMapping && checkCustomerOrders){
+        // if(mappedPartner && customerTicketOrders?.length > 0 ){
+          temp["customer_mapped_partner"] = mappedPartner?.partner || null
+          temp["customer_ticket_orders"] = customerTicketOrders?.length
+          payload.push(temp)
+        // }
+      }
+      if(!checkCustomerOrders && !checkVendorMapping){
+        if(!mappedPartner && customerTicketOrders?.length === 0){
+          temp["customer_ticket_orders"] = customerTicketOrders?.length
+          temp["customer_mapped_partner"] = mappedPartner?.partner || null
+          payload.push(temp)
+          continue
+        }
+      }
+    }
+    // no pagination required
+    totalRecords = payload?.length
+    return {
+      total_records: totalRecords,
+      // totalPages: totalPages,
+      // recordPerPage: recordPerPage,
+      // currentPage: currentPage,
+      _payload: payload,
+    };
+  } catch(err){
     throw err
   }
 }
@@ -532,4 +807,4 @@ const getVendorShortName = async ({ vendorId }) => {
   }
 };
 
-export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions, getTicketOrderInfo, getAllTickets };
+export { getPartnerInfo, getUserInfo, createVendorCustomer, getRoles, updatePartnerProfile, getCustomerSuggesions, getTicketOrderInfo, getAllTickets, getTicketCounts, getAllCustomerData };

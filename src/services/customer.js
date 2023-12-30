@@ -55,12 +55,14 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, v
         partner: partner,
       });
     }
-    await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor_id}/association`, {
-      params: {
-        customer: partner?._id,
-        associate: "YES"
-      }
-    })
+    if(vendor_id){
+      await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor_id}/association`, {
+        params: {
+          customer: partner?._id,
+          associate: "YES"
+        }
+      })
+    }
     return signInResponse;
   } catch (err) {
     if(err?.response?.data){
