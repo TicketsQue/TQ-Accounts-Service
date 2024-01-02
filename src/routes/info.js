@@ -11,6 +11,8 @@ import {
   getAllTickets,
   getTicketCounts,
   getAllCustomerData,
+  sendContinueBooking,
+  sendContinueVendorMessage,
 } from "../services/info.js";
 import { validateCustomerRole } from "../middleware/customer-login-validation.js";
 import errorResponse from "../utils/response.js";
@@ -144,6 +146,43 @@ const getTicketsPaymentInfoHandler = async (_req, _res) => {
   }
 }
 
+//continue booking handler
+const continueBookingHandler = async (_req, _res) => {
+  try{
+    return _res.status(200).json(await sendContinueBooking(_req))
+  } catch(_e){
+    if(_e.message.toLowerCase().startsWith("invalid request")){
+      return errorResponse(_e, 400, _res)
+    }
+    if(_e.message.toLowerCase().endsWith("not found")){
+      return errorResponse(_e, 404, _res)
+    }
+    if(_e.message.toLowerCase().startsWith("access denied")){
+      return errorResponse(_e, 403, _res)
+    }
+    console.log("unhandled server on get all tickets")
+    console.log(_e)
+    return errorResponse(new Error("some thing went wrong"), 500, _res)
+  }
+}
+const continueVendorBookingHandler = async (_req, _res) => {
+  try{
+    return _res.status(200).json(await sendContinueVendorMessage(_req))
+  } catch(_e){
+    if(_e.message.toLowerCase().startsWith("invalid request")){
+      return errorResponse(_e, 400, _res)
+    }
+    if(_e.message.toLowerCase().endsWith("not found")){
+      return errorResponse(_e, 404, _res)
+    }
+    if(_e.message.toLowerCase().startsWith("access denied")){
+      return errorResponse(_e, 403, _res)
+    }
+    console.log("unhandled server on get all tickets")
+    console.log(_e)
+    return errorResponse(new Error("some thing went wrong"), 500, _res)
+  }
+}
 
 
 infoRouter.post(
@@ -168,5 +207,10 @@ infoRouter.get("/info/tickets/list", getAllTicketsHandler)
 infoRouter.get("/info/tickets/count", getTicketCountsHandler)
 
 infoRouter.get("/info/customers/all", getAllCustomerDataHander)
+
+// continue booking endpoint
+infoRouter.post("/info/continue/booking", continueBookingHandler)
+
+infoRouter.post("/info/continue/vendor/booking", continueVendorBookingHandler)
 
 export default infoRouter;
