@@ -1,7 +1,8 @@
 import axios from "axios";
 import { checkUser, customerSignIn, getPartner, getPartnerType } from "./customer.js";
-import { getUserInfo } from "./info.js";
+import { getRoles, getUserInfo } from "./info.js";
 import { capitalize } from "../utils/strings.js";
+import sendEmail from "../helpers/sendEmail.js";
 
 const getToken = async ({ mobile }) => {
   try {
@@ -131,6 +132,19 @@ const addStaff = async (_req) => {
       `${process.env.SYSTEM_SERVER}/system/partners/staff-onboard`,
       _req.body
     );
+    const staff = await getUserInfo({_id: response?.data?.user?._id})
+    const mailSender = sendEmail(staff?.partner?.email, {
+      name: staff?.partner?.name,
+      role: staff?.role?.name,
+      username: staff?.partner?.mobile,
+      password: _req.body?.user?.password,
+      vendor_name: staff?.vendor?.name,
+      vendor_logo: staff?.vendor?.logo?.image_link
+    })
+    mailSender
+      .catch(err => {
+        console.log(err)
+    })
     return response.data;
   } catch (errors) {
     if(errors.response?.data){
@@ -187,7 +201,7 @@ const getStaff = async (_req) => {
     //URL 'SYSTEM_SERVER' for the system service is added in .env
     const response = await axios.get(
       `${process.env.SYSTEM_SERVER}/system/partners/${_req.params.vendor}/employees`,
-        { params: { search: _req.query.search || "", page: _req.query.page || 0, sort: _req.query.sort}}
+        { params: _req.query}
     );
     const staffList = response.data
     const staffListUpdated = staffList.payload.map((staff) => {
