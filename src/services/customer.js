@@ -13,14 +13,14 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
     if (partner_info) {
       return await checkUser({ mobile: mobile });
     } else {
-      if(!name){
+      if (!name) {
         throw new Error("User not found")
       }
       await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
       return await checkUser({ mobile: mobile });
     }
   } catch (err) {
-    if(err.response?.data){
+    if (err.response?.data) {
       throw new Error(err.response.data)
     }
     throw err;
@@ -35,14 +35,14 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, v
       throw new Error("user does not exist");
     }
     let partner = null
-    for(let i=0;i<partnerInfo.length;i++){
+    for (let i = 0; i < partnerInfo.length; i++) {
       // const partnerType = await getPartnerType({_id: partnerInfo[i].partner_type}) //old logic
-      if(partnerInfo[i].partner_type.handle === 'customer'){
-          partner = partnerInfo[i]
-          break
+      if (partnerInfo[i].partner_type.handle === 'customer') {
+        partner = partnerInfo[i]
+        break
       }
     }
-    if(!partner){
+    if (!partner) {
       throw new Error("user does not exist");
     }
     const signInResponse = await customerSignIn({ mobile: user, otp: otp });
@@ -55,7 +55,7 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, v
         partner: partner,
       });
     }
-    if(vendor_id){
+    if (vendor_id) {
       await axios.get(`${process.env.SYSTEM_SERVER}/system/partners/${vendor_id}/association`, {
         params: {
           customer: partner?._id,
@@ -65,7 +65,7 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, v
     }
     return signInResponse;
   } catch (err) {
-    if(err?.response?.data){
+    if (err?.response?.data) {
       console.log("System response")
       throw new Error(err?.response?.data)
     }
@@ -117,7 +117,7 @@ const checkUser = async ({ mobile }) => {
       `${process.env.SYSTEM_SERVER}/system/users/check?user=${mobile}`,
       {
         headers: {
-            'Origin': process.env.CUSTOMER_BASE_URL, 
+          'Origin': process.env.CUSTOMER_BASE_URL,
         }
       }
     );
@@ -138,17 +138,17 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
     if (!partner) {
       throw new Error("user does not exist");
     }
-    let updateBody = {status: true}
-    if(name){
+    let updateBody = { status: true }
+    if (name) {
       updateBody.name = capitalize(name)
     }
-    if(email){
+    if (email) {
       updateBody.email = email
     }
-    if(mobile){
+    if (mobile) {
       updateBody.mobile = mobile
     }
-    if(country_code){
+    if (country_code) {
       updateBody.country_code = country_code
     }
     const updateResponse = await axios.put(
@@ -157,7 +157,7 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
     );
     return updateResponse.data;
   } catch (err) {
-    if(err?.response?.data){
+    if (err?.response?.data) {
       throw new Error(err?.response?.data)
     }
     throw err;
@@ -169,7 +169,7 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
  * @param {Object} param The object should contain the user name, email and mobile
  * @returns {Object} returns the created user(partner in db) field
  */
-const createPartner = async ({ name, email, mobile, country_code}) => {
+const createPartner = async ({ name, email, mobile, country_code }) => {
   try {
     const response = await axios.post(
       //System service URL
@@ -203,8 +203,8 @@ const customerSignIn = async ({ mobile, otp }) => {
         otp: otp,
       },
       {
-        headers:{
-          'Origin': process.env.CUSTOMER_BASE_URL, 
+        headers: {
+          'Origin': process.env.CUSTOMER_BASE_URL,
         }
       }
     );
@@ -242,16 +242,16 @@ const getCustomerRole = async () => {
 const createUser = async ({ name, email, mobile, country_code }) => {
   try {
     let createBody = {}
-    if(name){
+    if (name) {
       createBody.name = name
     }
-    if(email){
+    if (email) {
       createBody.email = email
     }
-    if(mobile){
+    if (mobile) {
       createBody.mobile = mobile
     }
-    if(country_code){
+    if (country_code) {
       createBody.country_code = country_code
     }
     const customerRole = await getCustomerRole();
@@ -309,10 +309,10 @@ const getPartnerType = async ({ _id }) => {
 };
 
 const getConstants = async () => {
-  try{
+  try {
     const response = await axios.get(`${process.env.SYSTEM_SERVER}/system/constants`)
     return response.data
-  } catch(err){
+  } catch (err) {
     throw err
   }
 }
