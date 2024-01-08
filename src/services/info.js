@@ -958,6 +958,7 @@ const getVendorShortName = async ({ vendorId }) => {
 
 export {
   getPartnerInfo,
+  getPartnerByPartnerId,
   getUserInfo,
   createVendorCustomer,
   getRoles,

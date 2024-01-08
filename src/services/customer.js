@@ -1,5 +1,6 @@
 import axios from "axios";
 import { capitalize } from "../utils/strings.js";
+import { registerCardToCustomer } from "./qr_card.js";
 
 /**
  * A function to create new customer using the system service
@@ -8,7 +9,7 @@ import { capitalize } from "../utils/strings.js";
  */
 
 //handler method
-const customerCreate = async ({ name, email, mobile, country_code, partner_info }) => {
+const customerCreate = async ({ name, email, mobile, country_code, dob, nationality,  partner_info }) => {
   try {
     if (partner_info) {
       return await checkUser({ mobile: mobile });
@@ -16,7 +17,7 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
       if(!name){
         throw new Error("User not found")
       }
-      await createUser({ name: name, email: email, mobile: mobile, country_code: country_code });
+      await createUser({ name: name, email: email, mobile: mobile, country_code: country_code, dob: dob, nationality: nationality });
       return await checkUser({ mobile: mobile });
     }
   } catch (err) {
@@ -28,7 +29,7 @@ const customerCreate = async ({ name, email, mobile, country_code, partner_info 
 };
 
 //handler method
-const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, vendor_id }) => {
+const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, vendor_id, qr_token }) => {
   try {
     const partnerInfo = await getPartner({ mobile: user });
     if (partnerInfo.length === 0) {
@@ -62,6 +63,12 @@ const customerSignInAndUpdate = async ({ name, email, user, country_code, otp, v
           associate: "YES"
         }
       })
+    }
+    const customer = partner?._id
+    // assuming customer is trying to access through VIP membership card
+    if(qr_token){
+      // register the customer to the qr token
+      await registerCardToCustomer({qr_token, customer})
     }
     return signInResponse;
   } catch (err) {
@@ -169,7 +176,7 @@ const updateCustomer = async ({ name, email, mobile, country_code, partner }) =>
  * @param {Object} param The object should contain the user name, email and mobile
  * @returns {Object} returns the created user(partner in db) field
  */
-const createPartner = async ({ name, email, mobile, country_code}) => {
+const createPartner = async ({ name, email, mobile, country_code, dob, nationality}) => {
   try {
     const response = await axios.post(
       //System service URL
@@ -180,6 +187,8 @@ const createPartner = async ({ name, email, mobile, country_code}) => {
         email: email,
         mobile: mobile,
         country_code: country_code,
+        dob: dob,
+        nationality: nationality,
         status: true,
       }
     );
@@ -239,7 +248,7 @@ const getCustomerRole = async () => {
  * @param {Object} param An object with users name, email and mobile
  * @returns {Object} returns the user created
  */
-const createUser = async ({ name, email, mobile, country_code }) => {
+const createUser = async ({ name, email, mobile, country_code, dob, nationality }) => {
   try {
     let createBody = {}
     if(name){
@@ -253,6 +262,12 @@ const createUser = async ({ name, email, mobile, country_code }) => {
     }
     if(country_code){
       createBody.country_code = country_code
+    }
+    if(dob){
+      createBody.dob = dob
+    }
+    if(dob){
+      createBody.nationality = nationality
     }
     const customerRole = await getCustomerRole();
     const partner = await createPartner(createBody);

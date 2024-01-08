@@ -2,6 +2,7 @@ import { Router } from "express";
 import infoRouter from "./info.js";
 import customerRouter from "./customer.js";
 import staffRouter from "./staff.js";
+import qrCardRoutes from "./qr_card.js";
 
 const router = Router();
 
@@ -10,5 +11,6 @@ router.use(infoRouter);
 // customer routes for customer(users who search and buy tickets from TicketsQue) related end-points
 router.use(customerRouter);
 router.use(staffRouter);
+router.use(qrCardRoutes)
 
 export default router;
